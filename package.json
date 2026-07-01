@@ -1,0 +1,24 @@
+{
+  "name": "sealproof",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SealProof — Remote Online Notarization SaaS (NC-compliant RON)",
+  "workspaces": [
+    "shared",
+    "services/*"
+  ],
+  "scripts": {
+    "db:migrate": "node shared/db/migrate.js",
+    "db:seed": "node shared/db/seeds/run.js",
+    "dev:commission": "cd services/notary-commission-svc && npm run dev",
+    "dev:roster": "cd services/notary-roster-svc && npm run dev",
+    "dev:orchestrator": "cd services/session-orchestrator-svc && npm run dev",
+    "test": "jest --runInBand",
+    "lint": "eslint . --ext .js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "author": "TRG TechLink / SealProof LLC",
+  "license": "UNLICENSED"
+}

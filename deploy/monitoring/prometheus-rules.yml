@@ -1,0 +1,140 @@
+# =============================================================================
+# SealProof — Prometheus Alert Rules
+# =============================================================================
+# Per §18.2 of the master build prompt.
+# Add to existing TRG Prometheus/AlertManager config.
+# =============================================================================
+
+groups:
+  - name: sealproof_critical
+    interval: 30s
+    rules:
+      # CRITICAL: Hash chain verification failed
+      - alert: JournalHashChainBroken
+        expr: sealproof_journal_chain_intact{} == 0
+        for: 0m
+        labels:
+          severity: critical
+          service: sealproof
+        annotations:
+          summary: "Journal hash chain integrity failure detected"
+          description: "Notary {{ $labels.notary_id }} has a broken hash chain. Possible data tampering. Investigate immediately."
+
+      # CRITICAL: Audit log write failure
+      - alert: AuditLogWriteFailure
+        expr: rate(sealproof_audit_log_write_errors_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: sealproof
+        annotations:
+          summary: "Audit log write failures detected"
+          description: "{{ $value }} audit log write failures in the last 5 minutes. SOC 2 compliance at risk."
+
+  - name: sealproof_high
+    interval: 1m
+    rules:
+      # HIGH: Session recording upload failed
+      - alert: RecordingUploadFailure
+        expr: sealproof_recording_upload_errors_total > 0
+        for: 0m
+        labels:
+          severity: high
+          service: sealproof
+        annotations:
+          summary: "Session recording upload failed"
+          description: "Recording for session {{ $labels.session_id }} failed to upload to S3. NCGS compliance requires all sessions to be recorded."
+
+      # HIGH: Queue depth with no notaries available
+      - alert: QueueBacklogNoNotaries
+        expr: sealproof_queue_depth > 10 and sealproof_notaries_available == 0
+        for: 5m
+        labels:
+          severity: high
+          service: sealproof
+        annotations:
+          summary: "Queue has {{ $value }} sessions but no notaries available"
+          description: "Sessions are queuing with no notaries on shift. Customers are waiting."
+
+      # HIGH: TRG Pay webhook delivery failure
+      - alert: PaymentWebhookFailure
+        expr: sealproof_payment_webhook_failures_total > 0
+        for: 0m
+        labels:
+          severity: high
+          service: sealproof
+        annotations:
+          summary: "TRG Pay webhook delivery failed"
+          description: "Payment webhook retries exhausted for {{ $labels.transaction_id }}."
+
+      # HIGH: Service down
+      - alert: ServiceDown
+        expr: up{job=~"sealproof-.*"} == 0
+        for: 2m
+        labels:
+          severity: high
+          service: sealproof
+        annotations:
+          summary: "SealProof service {{ $labels.instance }} is down"
+          description: "The service has been unreachable for more than 2 minutes."
+
+  - name: sealproof_medium
+    interval: 2m
+    rules:
+      # MEDIUM: Time-to-match SLA breach
+      - alert: TimeToMatchSLABreach
+        expr: histogram_quantile(0.95, rate(sealproof_session_match_duration_seconds_bucket[15m])) > 300
+        for: 15m
+        labels:
+          severity: medium
+          service: sealproof
+        annotations:
+          summary: "Session matching p95 latency exceeds 5 minutes"
+          description: "p95 time-to-match is {{ $value | humanizeDuration }}. SLA target is <2 minutes for standard, <30 seconds for rush."
+
+      # MEDIUM: KYC failure rate spike
+      - alert: KYCFailureRateHigh
+        expr: rate(sealproof_kyc_failures_total[1h]) / rate(sealproof_kyc_attempts_total[1h]) > 0.30
+        for: 0m
+        labels:
+          severity: medium
+          service: sealproof
+        annotations:
+          summary: "KYC failure rate above 30%"
+          description: "{{ $value | humanizePercentage }} of KYC attempts are failing. Check Persona integration or potential fraud pattern."
+
+      # MEDIUM: High error rate
+      - alert: HighErrorRate
+        expr: rate(sealproof_http_requests_total{status=~"5.."}[5m]) / rate(sealproof_http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: medium
+          service: sealproof
+        annotations:
+          summary: "Error rate above 5% for {{ $labels.service }}"
+          description: "{{ $value | humanizePercentage }} of requests returning 5xx errors."
+
+  - name: sealproof_low
+    interval: 5m
+    rules:
+      # LOW: Notary credential expiring
+      - alert: NotaryCredentialExpiring
+        expr: sealproof_notary_credential_days_until_expiry < 7
+        for: 0m
+        labels:
+          severity: low
+          service: sealproof
+        annotations:
+          summary: "Notary credential expiring in {{ $value }} days"
+          description: "Notary {{ $labels.notary_id }} ({{ $labels.notary_name }}) has credentials expiring soon. Action required."
+
+      # LOW: High memory usage
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes{service=~"sp-.*"} / 1024 / 1024 > 400
+        for: 10m
+        labels:
+          severity: low
+          service: sealproof
+        annotations:
+          summary: "High memory usage on {{ $labels.service }}"
+          description: "{{ $labels.service }} using {{ $value | humanize }}MB of memory."

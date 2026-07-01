@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --brand-50:  #F7F5F0;
+  --brand-100: #EDE9DF;
+  --brand-200: #DDD6C5;
+  --brand-300: #C5A05E;
+  --brand-400: #B8913F;
+  --brand-500: #A07D35;
+  --brand-600: #8B6B2A;
+  --brand-700: #6E5522;
+  --brand-800: #1A2332;
+  --brand-900: #0F1B2D;
+  --brand-950: #0A1220;
+  --gold: #C5A05E;
+  --navy: #0F1B2D;
+}
+
+body { @apply bg-surface-alt text-gray-900 antialiased font-body; }
+*:focus-visible { @apply outline-none ring-2 ring-gold-300 ring-offset-2; }
+
+.heading-serif { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 600; }
+.text-gold-gradient {
+  background: linear-gradient(135deg, #C5A05E 0%, #D4B574 50%, #C5A05E 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.divider-gold { height: 1px; background: linear-gradient(90deg, transparent 0%, #C5A05E 50%, transparent 100%); }
+.seal-stamp {
+  border: 2px solid #C5A05E; border-radius: 50%; padding: 12px;
+  background: linear-gradient(135deg, #0F1B2D 0%, #1A2332 100%);
+  box-shadow: 0 0 20px rgba(197, 160, 94, 0.15);
+}
+.card-legal { @apply bg-white border border-gray-200 rounded-legal shadow-legal-sm; transition: box-shadow 0.2s ease, border-color 0.2s ease; }
+.card-legal:hover { @apply shadow-legal-md; border-color: #DDD6C5; }
+.bg-legal-warm { background: linear-gradient(180deg, #FAFAF7 0%, #F7F5F0 100%); }
+.bg-legal-dark { background: linear-gradient(180deg, #0F1B2D 0%, #0A1220 100%); }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #FAFAF7; }
+::-webkit-scrollbar-thumb { background: #DDD6C5; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #C5A05E; }

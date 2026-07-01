@@ -1,0 +1,643 @@
+openapi: 3.1.0
+info:
+  title: SealProof Public API
+  description: |
+    Remote Online Notarization API for B2B partners.
+    Authenticate via HMAC-SHA256 request signing.
+    All timestamps are ISO 8601 UTC. All monetary values are in cents (USD).
+  version: 1.0.0
+  contact:
+    name: SealProof API Support
+    email: api-support@sealproof.ai
+    url: https://sealproof.ai
+  license:
+    name: Proprietary
+servers:
+  - url: https://api.sealproof.ai/v1
+    description: Production
+  - url: https://api-staging.sealproof.ai/v1
+    description: Staging
+
+security:
+  - hmacAuth: []
+
+tags:
+  - name: Sessions
+    description: Create and manage notarization sessions
+  - name: Documents
+    description: Retrieve notarized documents
+  - name: Webhooks
+    description: Register and manage webhook endpoints
+  - name: Usage
+    description: API usage and billing
+
+paths:
+  # =========================================================================
+  # Sessions
+  # =========================================================================
+  /sessions:
+    post:
+      tags: [Sessions]
+      summary: Create a notarization session
+      description: |
+        Creates a new notarization session. Returns a session ID and
+        customer-facing URL where signers complete KYC and join the session.
+      operationId: createSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-idempotency-key: true
+
+    get:
+      tags: [Sessions]
+      summary: List sessions
+      description: Returns paginated list of sessions for this partner.
+      operationId: listSessions
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [created, kyc_pending, kyc_complete, queued, in_session, completed, rejected, failed]
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter sessions created after this timestamp
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter sessions created before this timestamp
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 25
+            maximum: 100
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor from previous response
+      responses:
+        '200':
+          description: Session list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /sessions/{sessionId}:
+    get:
+      tags: [Sessions]
+      summary: Get session details
+      description: Returns full details of a specific session including status, timestamps, and document references.
+      operationId: getSession
+      parameters:
+        - $ref: '#/components/parameters/sessionId'
+      responses:
+        '200':
+          description: Session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /sessions/{sessionId}/cancel:
+    post:
+      tags: [Sessions]
+      summary: Cancel a session
+      description: |
+        Cancel a session that has not yet entered `in_session` status.
+        Sessions already in progress cannot be cancelled via API.
+      operationId: cancelSession
+      parameters:
+        - $ref: '#/components/parameters/sessionId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Cancellation reason
+                  example: Customer requested cancellation
+      responses:
+        '200':
+          description: Session cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '409':
+          description: Session cannot be cancelled (already in progress or completed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # =========================================================================
+  # Documents
+  # =========================================================================
+  /sessions/{sessionId}/documents:
+    get:
+      tags: [Documents]
+      summary: List session documents
+      description: |
+        Returns metadata and download URLs for all documents in a completed session.
+        Documents are only available after the session reaches `completed` status.
+        Download URLs expire after 1 hour.
+      operationId: getSessionDocuments
+      parameters:
+        - $ref: '#/components/parameters/sessionId'
+      responses:
+        '200':
+          description: Document list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentListResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Session not yet completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # =========================================================================
+  # Webhooks
+  # =========================================================================
+  /webhooks:
+    post:
+      tags: [Webhooks]
+      summary: Register a webhook endpoint
+      description: |
+        Register a URL to receive webhook events. All events are signed
+        with HMAC-SHA256 using your API secret as the key.
+      operationId: registerWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterWebhookRequest'
+      responses:
+        '201':
+          description: Webhook registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+
+    get:
+      tags: [Webhooks]
+      summary: List registered webhooks
+      operationId: listWebhooks
+      responses:
+        '200':
+          description: Webhook list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  webhooks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Webhook'
+
+  /webhooks/{webhookId}:
+    delete:
+      tags: [Webhooks]
+      summary: Delete a webhook
+      operationId: deleteWebhook
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Webhook deleted
+
+  # =========================================================================
+  # Usage
+  # =========================================================================
+  /usage:
+    get:
+      tags: [Usage]
+      summary: Get API usage summary
+      description: Returns current billing period usage, quota, and session counts.
+      operationId: getUsage
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [current, previous]
+            default: current
+      responses:
+        '200':
+          description: Usage summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageSummary'
+
+# =============================================================================
+# Components
+# =============================================================================
+components:
+  securitySchemes:
+    hmacAuth:
+      type: apiKey
+      in: header
+      name: X-Signature
+      description: |
+        HMAC-SHA256 signature of the request. Computed as:
+        `HMAC-SHA256(secret, timestamp + method + path + body)`
+        Include `X-Timestamp` header with Unix epoch seconds.
+        Include `X-API-Key` header with your partner API key.
+
+  parameters:
+    sessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Session UUID
+
+  responses:
+    BadRequest:
+      description: Invalid request body or parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Invalid or missing authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until rate limit resets
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    # --- Session ---
+    CreateSessionRequest:
+      type: object
+      required: [document_type, signers, service_level]
+      properties:
+        document_type:
+          type: string
+          enum: [deed, poa, will, trust, affidavit, mortgage, other]
+          description: Type of document to notarize
+        document_type_other:
+          type: string
+          description: Required if document_type is 'other'
+        signer_count:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 1
+        signers:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/SignerInput'
+        service_level:
+          type: string
+          enum: [standard, rush]
+          default: standard
+          description: Rush sessions get priority matching (<30s target)
+        state:
+          type: string
+          default: NC
+          description: State where the notarial act will be performed
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Partner-defined metadata (returned in webhooks)
+        idempotency_key:
+          type: string
+          maxLength: 64
+          description: Unique key to prevent duplicate session creation
+      example:
+        document_type: poa
+        signers:
+          - name: John Doe
+            email: john@example.com
+            role: primary
+        service_level: standard
+        metadata:
+          internal_ref: "CASE-12345"
+
+    SignerInput:
+      type: object
+      required: [name, email, role]
+      properties:
+        name:
+          type: string
+          description: Signer's full legal name
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          description: Mobile number for SMS notifications
+        role:
+          type: string
+          enum: [primary, co_signer, witness]
+
+    CreateSessionResponse:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          example: created
+        customer_url:
+          type: string
+          format: uri
+          description: URL where signer(s) complete KYC and join the session
+        kyc_required_for:
+          type: array
+          items:
+            type: string
+          description: List of signer emails that need KYC verification
+        created_at:
+          type: string
+          format: date-time
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [created, kyc_pending, kyc_complete, queued, in_session, completed, rejected, failed, cancelled]
+        document_type:
+          type: string
+        signer_count:
+          type: integer
+        service_level:
+          type: string
+        state_of_act:
+          type: string
+        customer_url:
+          type: string
+          format: uri
+        metadata:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        kyc_completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        queued_at:
+          type: string
+          format: date-time
+          nullable: true
+        session_started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        session_duration_seconds:
+          type: integer
+          nullable: true
+        customer_paid_cents:
+          type: integer
+          nullable: true
+        document_count:
+          type: integer
+        signers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Signer'
+
+    Signer:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        kyc_result:
+          type: string
+          enum: [pending, passed, failed, manual_review]
+          nullable: true
+        signed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    SessionListResponse:
+      type: object
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
+        cursor:
+          type: string
+          nullable: true
+          description: Pass to next request for pagination
+        has_more:
+          type: boolean
+
+    # --- Documents ---
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        document_name:
+          type: string
+        document_type:
+          type: string
+        status:
+          type: string
+          enum: [uploaded, signed, notarized, sealed, delivered]
+        page_count:
+          type: integer
+        download_url:
+          type: string
+          format: uri
+          description: Pre-signed download URL (expires in 1 hour)
+        tsa_timestamp:
+          type: string
+          format: date-time
+          nullable: true
+          description: RFC 3161 timestamp when seal was applied
+
+    DocumentListResponse:
+      type: object
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+
+    # --- Webhooks ---
+    RegisterWebhookRequest:
+      type: object
+      required: [url, events]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: HTTPS endpoint to receive webhook events
+        events:
+          type: array
+          items:
+            type: string
+            enum:
+              - session.created
+              - session.kyc_complete
+              - session.queued
+              - session.matched
+              - session.started
+              - session.completed
+              - session.failed
+              - session.cancelled
+          description: Events to subscribe to
+
+    Webhook:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    # --- Usage ---
+    UsageSummary:
+      type: object
+      properties:
+        partner_id:
+          type: string
+          format: uuid
+        tier:
+          type: string
+          enum: [starter, growth, scale, enterprise]
+        billing_period:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date-time
+            end:
+              type: string
+              format: date-time
+        sessions:
+          type: object
+          properties:
+            total:
+              type: integer
+            completed:
+              type: integer
+            failed:
+              type: integer
+            cancelled:
+              type: integer
+        quota:
+          type: integer
+          nullable: true
+          description: Monthly session quota (null for unlimited)
+        api_calls:
+          type: integer
+          description: Total API calls this billing period
+        charges:
+          type: object
+          properties:
+            subscription_cents:
+              type: integer
+            session_fees_cents:
+              type: integer
+            total_cents:
+              type: integer
+
+    # --- Error ---
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code
+          example: INVALID_REQUEST
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error context

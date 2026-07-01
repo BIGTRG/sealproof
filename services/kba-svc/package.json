@@ -1,0 +1,11 @@
+{
+  "name": "kba-svc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Knowledge-Based Authentication service for multi-state RON compliance",
+  "main": "src/index.js",
+  "dependencies": {
+    "@sealproof/shared": "workspace:*",
+    "axios": "^1.7.0"
+  }
+}

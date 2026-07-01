@@ -1,0 +1,40 @@
+# =============================================================================
+# SealProof — Backend Services Dockerfile
+# =============================================================================
+# Multi-stage build for all 15 microservices.
+# Each service runs as a PM2 process inside the container.
+# =============================================================================
+
+FROM node:25-alpine AS base
+RUN apk add --no-cache tini
+WORKDIR /app
+
+# Install PM2 globally
+RUN npm install -g pm2
+
+# Copy package files
+COPY package.json package-lock.json* ./
+COPY shared/package.json ./shared/
+
+# Install dependencies
+RUN npm install --production --ignore-scripts
+
+# Copy source
+COPY shared/ ./shared/
+COPY services/ ./services/
+COPY ecosystem.production.config.js ./
+
+# Create log directory
+RUN mkdir -p /var/log/sealproof
+
+# Expose all service ports
+EXPOSE 4001 4002 4003 4004 4005 4006 4007 4008 4009 4010 4011 4012 4013 4014 4015
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:4003/health || exit 1
+
+# Run with tini for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["pm2-runtime", "ecosystem.production.config.js", "--only", \
+  "sp-notary-commission,sp-notary-roster,sp-session-orchestrator,sp-kyc,sp-livekit-bridge,sp-esign-bridge,sp-journal,sp-recording,sp-seal-applicator,sp-payment,sp-notification,sp-audit-export,sp-api-gateway,sp-webhook,sp-tenant"]

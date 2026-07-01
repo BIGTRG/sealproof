@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Google Fonts — imported via next/font in layout.tsx for production,
+   fallback @import for dev */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* ─── Legal / Attorney Color Palette ─── */
+  --brand-50:  #F7F5F0;
+  --brand-100: #EDE9DF;
+  --brand-200: #DDD6C5;
+  --brand-300: #C5A05E;   /* Gold accent */
+  --brand-400: #B8913F;
+  --brand-500: #A07D35;
+  --brand-600: #8B6B2A;
+  --brand-700: #6E5522;
+  --brand-800: #1A2332;   /* Dark navy */
+  --brand-900: #0F1B2D;   /* Deep navy */
+  --brand-950: #0A1220;   /* Darkest */
+
+  --surface:      #FFFFFF;
+  --surface-alt:  #FAFAF7;
+  --surface-warm: #F7F5F0;
+  --surface-dark: #0F1B2D;
+
+  --gold:  #C5A05E;
+  --gold-light: #D4B574;
+  --gold-dark:  #A07D35;
+  --navy:  #0F1B2D;
+  --navy-light: #1A2332;
+  --charcoal: #2C3645;
+}
+
+/* White-label overrides injected by tenant branding */
+[data-tenant] {
+  --brand-950: var(--tenant-primary, #0A1220);
+  --brand-900: var(--tenant-secondary, #0F1B2D);
+  --brand-300: var(--tenant-accent, #C5A05E);
+}
+
+body {
+  @apply bg-white text-gray-900 antialiased font-body;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ─── Focus States ─── */
+*:focus-visible {
+  @apply outline-none ring-2 ring-gold-300 ring-offset-2;
+}
+
+/* ─── Typography Refinements ─── */
+.heading-serif {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.text-gold-gradient {
+  background: linear-gradient(135deg, #C5A05E 0%, #D4B574 50%, #C5A05E 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Decorative Elements ─── */
+.border-gold {
+  border-color: #C5A05E;
+}
+
+.divider-gold {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, #C5A05E 50%, transparent 100%);
+}
+
+.seal-stamp {
+  border: 2px solid #C5A05E;
+  border-radius: 50%;
+  padding: 12px;
+  background: linear-gradient(135deg, #0F1B2D 0%, #1A2332 100%);
+  box-shadow: 0 0 20px rgba(197, 160, 94, 0.15);
+}
+
+/* ─── Card Hover Refinement ─── */
+.card-legal {
+  @apply bg-white border border-gray-200 rounded-legal shadow-legal-sm;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.card-legal:hover {
+  @apply shadow-legal-md;
+  border-color: #DDD6C5;
+}
+
+/* ─── Section Backgrounds ─── */
+.bg-legal-warm {
+  background: linear-gradient(180deg, #FAFAF7 0%, #F7F5F0 100%);
+}
+.bg-legal-dark {
+  background: linear-gradient(180deg, #0F1B2D 0%, #0A1220 100%);
+}
+
+/* ─── Scrollbar (webkit) ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #FAFAF7; }
+::-webkit-scrollbar-thumb { background: #DDD6C5; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #C5A05E; }

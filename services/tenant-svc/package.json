@@ -1,0 +1,12 @@
+{
+  "name": "@sealproof/tenant-svc",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@sealproof/shared": "workspace:*"
+  }
+}

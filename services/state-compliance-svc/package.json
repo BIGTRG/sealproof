@@ -1,0 +1,10 @@
+{
+  "name": "state-compliance-svc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-state RON compliance rules engine",
+  "main": "src/index.js",
+  "dependencies": {
+    "@sealproof/shared": "workspace:*"
+  }
+}

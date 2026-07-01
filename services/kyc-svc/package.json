@@ -1,0 +1,17 @@
+{
+  "name": "@sealproof/kyc-svc",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@sealproof/shared": "workspace:*",
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "helmet": "^8.0.0",
+    "axios": "^1.7.0",
+    "uuid": "^10.0.0"
+  }
+}

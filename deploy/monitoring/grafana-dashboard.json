@@ -1,0 +1,124 @@
+{
+  "dashboard": {
+    "title": "SealProof — Live Operations",
+    "uid": "sealproof-live-ops",
+    "tags": ["sealproof", "notarization", "live-ops"],
+    "timezone": "America/New_York",
+    "refresh": "10s",
+    "time": { "from": "now-6h", "to": "now" },
+    "panels": [
+      {
+        "title": "Sessions In Flight",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+        "targets": [{ "expr": "sealproof_sessions_active" }],
+        "fieldConfig": { "defaults": { "thresholds": { "steps": [
+          { "value": 0, "color": "green" },
+          { "value": 20, "color": "yellow" },
+          { "value": 50, "color": "red" }
+        ]}}}
+      },
+      {
+        "title": "Queue Depth",
+        "type": "stat",
+        "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          { "expr": "sealproof_queue_depth{type='standard'}", "legendFormat": "Standard" },
+          { "expr": "sealproof_queue_depth{type='rush'}", "legendFormat": "Rush" }
+        ]
+      },
+      {
+        "title": "Notaries On Shift",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+        "targets": [{ "expr": "sealproof_notaries_available" }]
+      },
+      {
+        "title": "Time-to-Match (p50/p95/p99)",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          { "expr": "histogram_quantile(0.50, rate(sealproof_session_match_duration_seconds_bucket[5m]))", "legendFormat": "p50" },
+          { "expr": "histogram_quantile(0.95, rate(sealproof_session_match_duration_seconds_bucket[5m]))", "legendFormat": "p95" },
+          { "expr": "histogram_quantile(0.99, rate(sealproof_session_match_duration_seconds_bucket[5m]))", "legendFormat": "p99" }
+        ]
+      },
+      {
+        "title": "Session Volume (24h)",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+        "targets": [
+          { "expr": "increase(sealproof_sessions_completed_total[1h])", "legendFormat": "Completed" },
+          { "expr": "increase(sealproof_sessions_created_total[1h])", "legendFormat": "Created" }
+        ]
+      },
+      {
+        "title": "Notary Utilization",
+        "type": "timeseries",
+        "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+        "targets": [
+          { "expr": "sealproof_notaries_in_session / sealproof_notaries_available * 100", "legendFormat": "Utilization %" }
+        ]
+      },
+      {
+        "title": "Revenue (Today)",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 12, "w": 6, "h": 4 },
+        "targets": [{ "expr": "increase(sealproof_revenue_cents_total[24h]) / 100" }],
+        "fieldConfig": { "defaults": { "unit": "currencyUSD" } }
+      },
+      {
+        "title": "Notary Payouts (Today)",
+        "type": "stat",
+        "gridPos": { "x": 6, "y": 12, "w": 6, "h": 4 },
+        "targets": [{ "expr": "increase(sealproof_notary_payouts_cents_total[24h]) / 100" }],
+        "fieldConfig": { "defaults": { "unit": "currencyUSD" } }
+      },
+      {
+        "title": "KYC Pass Rate",
+        "type": "gauge",
+        "gridPos": { "x": 12, "y": 12, "w": 6, "h": 4 },
+        "targets": [{ "expr": "rate(sealproof_kyc_passes_total[1h]) / rate(sealproof_kyc_attempts_total[1h]) * 100" }],
+        "fieldConfig": { "defaults": { "min": 0, "max": 100, "unit": "percent", "thresholds": { "steps": [
+          { "value": 0, "color": "red" },
+          { "value": 80, "color": "yellow" },
+          { "value": 95, "color": "green" }
+        ]}}}
+      },
+      {
+        "title": "Journal Chain Integrity",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 12, "w": 6, "h": 4 },
+        "targets": [{ "expr": "sealproof_journal_chain_intact" }],
+        "fieldConfig": { "defaults": { "mappings": [
+          { "type": "value", "options": { "1": { "text": "INTACT", "color": "green" } } },
+          { "type": "value", "options": { "0": { "text": "BROKEN", "color": "red" } } }
+        ]}}
+      },
+      {
+        "title": "HTTP Request Rate by Service",
+        "type": "timeseries",
+        "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+        "targets": [
+          { "expr": "rate(sealproof_http_requests_total[5m])", "legendFormat": "{{ service }}" }
+        ]
+      },
+      {
+        "title": "Error Rate by Service",
+        "type": "timeseries",
+        "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+        "targets": [
+          { "expr": "rate(sealproof_http_requests_total{status=~'5..'}[5m])", "legendFormat": "{{ service }} 5xx" }
+        ]
+      },
+      {
+        "title": "Credentials Expiring (<30 days)",
+        "type": "table",
+        "gridPos": { "x": 0, "y": 24, "w": 24, "h": 6 },
+        "targets": [
+          { "expr": "sealproof_notary_credential_days_until_expiry < 30", "format": "table", "instant": true }
+        ]
+      }
+    ]
+  }
+}

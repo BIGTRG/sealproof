@@ -1,0 +1,22 @@
+import { Button } from '@/components/ui/Button';
+import { Scale } from 'lucide-react';
+import Link from 'next/link';
+
+export default function NotFound() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-surface-warm">
+      <div className="text-center max-w-md px-6">
+        <div className="seal-stamp inline-flex h-16 w-16 items-center justify-center mx-auto mb-6">
+          <Scale className="h-8 w-8 text-gold-300" />
+        </div>
+        <h1 className="font-display text-4xl font-bold text-navy-700 mb-2">404</h1>
+        <p className="text-sm text-gray-500 mb-6">
+          The page you are looking for does not exist or has been moved.
+        </p>
+        <Link href="/dashboard">
+          <Button variant="primary">Return Home</Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
