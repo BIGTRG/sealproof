@@ -7,7 +7,7 @@
     "dev": "node --watch src/index.js"
   },
   "dependencies": {
-    "@sealproof/shared": "workspace:*",
+    "@sealproof/shared": "file:../../shared",
     "express": "^4.21.0",
     "cors": "^2.8.5",
     "helmet": "^8.0.0",

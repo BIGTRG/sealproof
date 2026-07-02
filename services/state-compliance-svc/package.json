@@ -5,6 +5,6 @@
   "description": "Multi-state RON compliance rules engine",
   "main": "src/index.js",
   "dependencies": {
-    "@sealproof/shared": "workspace:*"
+    "@sealproof/shared": "file:../../shared"
   }
 }

@@ -1,35 +1,43 @@
 /**
- * Email via SendGrid
+ * Email via SMTP (Nodemailer)
  */
+const nodemailer = require('nodemailer');
 const { config, logger } = require('@sealproof/shared');
 
-let sgMail = null;
+let transporter = null;
 
-function getClient() {
-  if (!sgMail && config.sendgrid.apiKey) {
-    sgMail = require('@sendgrid/mail');
-    sgMail.setApiKey(config.sendgrid.apiKey);
+function getTransporter() {
+  if (!transporter && config.smtp && config.smtp.host) {
+    transporter = nodemailer.createTransport({
+      host: config.smtp.host,
+      port: config.smtp.port,
+      secure: false, // STARTTLS
+      auth: {
+        user: config.smtp.user,
+        pass: config.smtp.pass,
+      },
+    });
   }
-  return sgMail;
+  return transporter;
 }
 
 async function sendEmail({ to, subject, html, text, from }) {
-  const client = getClient();
-  if (!client) {
-    logger.warn('SendGrid not configured, email skipped', { to });
-    return { status: 'skipped', reason: 'sendgrid_not_configured' };
+  const t = getTransporter();
+  if (!t) {
+    logger.warn('SMTP not configured, email skipped', { to });
+    return { status: 'skipped', reason: 'smtp_not_configured' };
   }
 
   try {
-    const [response] = await client.send({
+    const info = await t.sendMail({
+      from: from || config.smtp.from,
       to,
-      from: from || config.sendgrid.fromEmail,
       subject,
       html,
       text,
     });
-    logger.info('Email sent', { to, statusCode: response.statusCode });
-    return { status: 'sent', statusCode: response.statusCode };
+    logger.info('Email sent', { to, messageId: info.messageId });
+    return { status: 'sent', messageId: info.messageId };
   } catch (err) {
     logger.error('Email failed', { error: err.message, to });
     throw Object.assign(new Error(`Email failed: ${err.message}`), { status: 502 });

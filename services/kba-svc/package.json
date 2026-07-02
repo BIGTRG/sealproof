@@ -5,7 +5,7 @@
   "description": "Knowledge-Based Authentication service for multi-state RON compliance",
   "main": "src/index.js",
   "dependencies": {
-    "@sealproof/shared": "workspace:*",
+    "@sealproof/shared": "file:../../shared",
     "axios": "^1.7.0"
   }
 }
