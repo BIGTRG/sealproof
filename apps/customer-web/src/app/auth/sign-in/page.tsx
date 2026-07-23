@@ -17,7 +17,7 @@ export default function SignInPage() {
         />
         <div className="relative text-center px-12">
           <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 rounded-full object-cover" />
-          <h2 className="font-display text-3xl text-white font-semibold">
+          <h2 className="font-script text-5xl text-white">
             SealProof
           </h2>
           <p className="mt-4 text-gray-400 max-w-sm mx-auto leading-relaxed">
@@ -36,7 +36,7 @@ export default function SignInPage() {
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2 mb-10">
             <Scale className="h-5 w-5 text-gold-400" />
-            <span className="text-lg font-display font-semibold text-navy-700">SealProof</span>
+            <span className="text-2xl font-script text-navy-700">SealProof</span>
           </div>
 
           <h1 className="font-display text-2xl font-semibold text-navy-700">

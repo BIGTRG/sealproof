@@ -1,15 +1,15 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
+  "/api/[...slug]/route": "app/api/[...slug]/route.js",
   "/api/health/route": "app/api/health/route.js",
   "/auth/sign-in/page": "app/auth/sign-in/page.js",
   "/auth/sign-up/page": "app/auth/sign-up/page.js",
-  "/api/[...slug]/route": "app/api/[...slug]/route.js",
   "/page": "app/page.js",
   "/session/active/[id]/page": "app/session/active/[id]/page.js",
   "/session/onboard/page": "app/session/onboard/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/dashboard/shifts/page": "app/dashboard/shifts/page.js",
-  "/dashboard/journal/page": "app/dashboard/journal/page.js",
   "/dashboard/earnings/page": "app/dashboard/earnings/page.js",
-  "/dashboard/settings/page": "app/dashboard/settings/page.js"
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/journal/page": "app/dashboard/journal/page.js",
+  "/dashboard/settings/page": "app/dashboard/settings/page.js",
+  "/dashboard/shifts/page": "app/dashboard/shifts/page.js"
 }

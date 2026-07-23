@@ -30,6 +30,7 @@ export default {
         surface: { DEFAULT: '#FFFFFF', alt: '#FAFAF7', warm: '#F7F5F0', dark: '#0F1B2D' },
       },
       fontFamily: {
+        script:  ['var(--font-script)', '\"Great Vibes\"', 'cursive'],
         sans: ['Inter', 'system-ui', 'sans-serif'],
         display: ['"Cormorant Garamond"', 'Georgia', 'serif'],
         body: ['Inter', 'system-ui', 'sans-serif'],

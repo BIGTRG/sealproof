@@ -49,6 +49,7 @@ const config: Config = {
         },
       },
       fontFamily: {
+        script:  ['var(--font-script)', '\"Great Vibes\"', 'cursive'],
         sans:    ['Inter', 'system-ui', 'sans-serif'],
         display: ['"Cormorant Garamond"', 'Georgia', 'serif'],
         serif:   ['"Cormorant Garamond"', 'Georgia', 'serif'],

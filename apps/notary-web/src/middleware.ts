@@ -7,7 +7,8 @@ const isProtectedRoute = createRouteMatcher([
   // /session/onboard is intentionally public: pre-account application wizard
 
   // '/dashboard(.*)', // TEMP public for stakeholder review, re-protect before launch
-  '/session/active(.*)',
+  // TEMP-DEMO-active: re-enable before launch
+  // '/session/active(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

@@ -12,7 +12,8 @@ const isProtectedRoute = createRouteMatcher([
 
 export default clerkMiddleware(async (auth, req) => {
   if (isProtectedRoute(req)) {
-    auth().protect();
+    // TEMP-DEMO: auth disabled for stakeholder review -- re-enable before launch
+    // auth().protect();
   }
 });
 

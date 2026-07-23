@@ -28,7 +28,7 @@ export function Sidebar() {
       <div className="flex h-16 items-center gap-2.5 px-6 border-b border-navy-500">
         <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 rounded-full object-cover" />
         <div>
-          <span className="text-sm font-display font-semibold text-white">SealProof</span>
+          <span className="text-xl font-script text-white">SealProof</span>
           <span className="block text-[10px] text-gold-300 font-medium tracking-wide uppercase">Admin Console</span>
         </div>
       </div>

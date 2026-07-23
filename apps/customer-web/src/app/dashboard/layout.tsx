@@ -31,7 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center gap-2">
               <Scale className="h-5 w-5 text-gold-400" />
-              <span className="text-base font-display font-semibold text-navy-700">SealProof</span>
+              <span className="text-2xl font-script text-navy-700">SealProof</span>
             </Link>
             <nav className="hidden sm:flex items-center gap-1">
               {navItems.map(({ href, label, icon: Icon }) => {

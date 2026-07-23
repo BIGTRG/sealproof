@@ -24,7 +24,7 @@ export default function SignInPage() {
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2 mb-10">
             <Scale className="h-5 w-5 text-gold-400" />
-            <span className="text-lg font-display font-semibold text-navy-700">SealProof</span>
+            <span className="text-2xl font-script text-navy-700">SealProof</span>
           </div>
           <h1 className="font-display text-2xl font-semibold text-navy-700">Sign in</h1>
           <p className="mt-2 text-sm text-gray-500">Access your notary dashboard.</p>

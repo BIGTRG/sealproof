@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react'; // TEMP-DEMO
 import { useSessionWizard } from '@/lib/store';
 import { StepIndicator } from '@/components/ui/ProgressBar';
 import { StepDocumentType } from '@/components/session/StepDocumentType';
@@ -42,7 +43,12 @@ const stepComponents: Record<number, React.ComponentType> = {
 };
 
 export default function NewSessionPage() {
-  const { step } = useSessionWizard();
+  const { step, setStep } = useSessionWizard();
+  // TEMP-DEMO: allow ?step=N override for review screenshots -- remove before launch
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('step');
+    if (q) setStep(parseInt(q, 10));
+  }, [setStep]);
   const StepComponent = stepComponents[step] || StepDocumentType;
 
   return (
@@ -52,7 +58,7 @@ export default function NewSessionPage() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 flex h-14 items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
             <Scale className="h-5 w-5 text-gold-400" />
-            <span className="text-base font-display font-semibold text-navy-700">SealProof</span>
+            <span className="text-2xl font-script text-navy-700">SealProof</span>
           </Link>
           <span className="text-sm text-gray-400">New Notarization Session</span>
         </div>

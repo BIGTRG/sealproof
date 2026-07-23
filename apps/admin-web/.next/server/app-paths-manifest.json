@@ -1,19 +1,19 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/api/[...slug]/route": "app/api/[...slug]/route.js",
-  "/api/health/route": "app/api/health/route.js",
-  "/auth/sign-in/page": "app/auth/sign-in/page.js",
   "/auth/sign-up/page": "app/auth/sign-up/page.js",
+  "/api/health/route": "app/api/health/route.js",
+  "/api/[...slug]/route": "app/api/[...slug]/route.js",
   "/page": "app/page.js",
-  "/dashboard/analytics/page": "app/dashboard/analytics/page.js",
-  "/dashboard/financials/page": "app/dashboard/financials/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/auth/sign-in/page": "app/auth/sign-in/page.js",
   "/dashboard/customers/page": "app/dashboard/customers/page.js",
   "/dashboard/compliance/page": "app/dashboard/compliance/page.js",
+  "/dashboard/financials/page": "app/dashboard/financials/page.js",
   "/dashboard/live-ops/page": "app/dashboard/live-ops/page.js",
+  "/dashboard/analytics/page": "app/dashboard/analytics/page.js",
   "/dashboard/live/page": "app/dashboard/live/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
   "/dashboard/pricing/page": "app/dashboard/pricing/page.js",
+  "/dashboard/notaries/page": "app/dashboard/notaries/page.js",
   "/dashboard/settings/page": "app/dashboard/settings/page.js",
-  "/dashboard/tenants/page": "app/dashboard/tenants/page.js",
-  "/dashboard/notaries/page": "app/dashboard/notaries/page.js"
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/tenants/page": "app/dashboard/tenants/page.js"
 }
