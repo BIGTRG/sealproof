@@ -36,7 +36,7 @@ export default function ActiveSessionPage() {
   const advanceStep = async () => {
     if (currentStep === 3) {
       // Apply seal
-      await api.applySeal(sessionId);
+      await api.applySeal(sessionId, session?.documentId ?? sessionId, {});
     }
     if (currentStep === 4) {
       // Confirm journal

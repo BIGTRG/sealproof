@@ -77,7 +77,7 @@ export const getCoverageMap = () =>
 /* ─── Session Queue ──────────────────────────────────────── */
 
 export const getSessionQueue = () =>
-  request<any>(`${API}/sessions/queue`);
+  request<any>(`${API}/sessions/queue`).then((r: any) => r?.data ?? r);
 
 export const claimSession = (sessionId: string) =>
   request<any>(`${API}/sessions/${sessionId}/match`, {
@@ -155,7 +155,26 @@ export const verifySeal = (documentId: string) =>
 /* ─── Earnings / Payments ────────────────────────────────── */
 
 export const getMyEarnings = () =>
-  request<any>(`${PAYMENT}/payouts/mine`);
+  request<any>(`${PAYMENT}/payouts/summary`);
 
 export const getEarningsSummary = () =>
   request<any>(`${PAYMENT}/payouts/summary`);
+
+export const getPayoutHistory = () =>
+  request<any[]>(`${PAYMENT}/payouts/mine`);
+
+// Aliases used by dashboard and session pages
+export const getMyActiveShift = () =>
+  getMyShifts().then((s: any) =>
+    Array.isArray(s) ? s.find((x: any) => x.status === "active" || x.checkedInAt) ?? null : s
+  );
+export const getQueuedSessions = getSessionQueue;
+export const startShift = () =>
+  createShift({
+    startTime: new Date().toISOString(),
+    endTime: new Date(Date.now() + 8 * 3600 * 1000).toISOString(),
+  });
+export const acceptSession = claimSession;
+export const getSessionById = getSession;
+export const confirmJournalEntry = (sessionId: string) =>
+  createJournalEntry({ sessionId });

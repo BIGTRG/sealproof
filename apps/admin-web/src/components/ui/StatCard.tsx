@@ -21,11 +21,11 @@ export function StatCard({ label, value, change, changeType, icon, iconBg = 'bg-
           <p className="text-xs font-medium text-gray-500">{label}</p>
           <p className="mt-1.5 text-2xl font-bold text-gray-900">{value}</p>
           {change && (
-            <p className={cn('mt-1 text-xs font-medium', {
-              'text-green-600': changeType === 'up',
-              'text-red-600': changeType === 'down',
-              'text-gray-500': changeType === 'neutral',
-            })}>
+            <p className={cn('mt-1 text-xs font-medium',
+              changeType === 'up' && 'text-green-600',
+              changeType === 'down' && 'text-red-600',
+              changeType === 'neutral' && 'text-gray-500',
+            )}>
               {change}
             </p>
           )}

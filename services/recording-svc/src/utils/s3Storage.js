@@ -20,6 +20,7 @@ const { config, logger, db } = require('@sealproof/shared');
 
 const s3 = new S3Client({
   region: config.aws.region,
+  ...(config.aws.endpoint ? { endpoint: config.aws.endpoint, forcePathStyle: true } : {}),
   credentials: {
     accessKeyId: config.aws.accessKeyId,
     secretAccessKey: config.aws.secretAccessKey,
@@ -70,7 +71,9 @@ async function uploadRecording(sessionId, encryptedData, metadata = {}) {
       Key: key,
       Body: encryptedData,
       ContentType: 'application/octet-stream',
-      ServerSideEncryption: 'AES256',
+      // SSE header only against real AWS; MinIO without KES rejects it.
+      // Data is already AES-256-GCM encrypted at the application layer.
+      ...(config.aws.endpoint ? {} : { ServerSideEncryption: 'AES256' }),
       ObjectLockMode: 'GOVERNANCE',
       ObjectLockRetainUntilDate: retainUntil,
       Metadata: {

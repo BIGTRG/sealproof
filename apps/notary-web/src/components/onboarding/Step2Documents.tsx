@@ -1,45 +1,88 @@
 'use client';
 
 /**
- * Step 2: Document upload — 6 required credentials
- *
- * 1. Commission Certificate
- * 2. Electronic Notary Certificate
- * 3. REN Authorization
- * 4. Surety Bond Proof
- * 5. E&O Insurance Policy
- * 6. Digital Signature Certificate
+ * Step 2: Document upload — checklist is built dynamically from the
+ * commission state's RON rules captured in Step 1.
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useOnboardingStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import { Upload, CheckCircle, FileText, X } from 'lucide-react';
 
-const requiredDocs = [
-  { key: 'commissionCert', label: 'Commission Certificate', desc: 'Your NC notary commission certificate' },
-  { key: 'electronicNotaryCert', label: 'Electronic Notary Certificate', desc: 'NC Electronic Notary Public certificate' },
-  { key: 'renAuthorization', label: 'REN Authorization', desc: 'Remote Electronic Notarization authorization letter' },
-  { key: 'suretyBond', label: 'Surety Bond Proof', desc: '$25,000 surety bond as required by NC law' },
-  { key: 'eoPolicy', label: 'E&O Insurance Policy', desc: 'Errors & Omissions insurance policy' },
-  { key: 'digitalSignatureCert', label: 'Digital Signature Certificate', desc: 'Certificate from an approved TSA provider' },
-];
+const money = (cents?: number | null) =>
+  cents ? `$${(cents / 100).toLocaleString('en-US')}` : '';
+
+type DocDef = { key: string; label: string; desc: string; optional?: boolean };
+
+function buildDocs(rules: any): DocDef[] {
+  const stateName = rules?.state_name || 'your state';
+  const bondTotal = (rules?.bond_amount_cents || 0) + (rules?.ron_bond_additional_cents || 0);
+  const docs: DocDef[] = [
+    {
+      key: 'commissionCert',
+      label: 'Commission Certificate',
+      desc: `Your ${stateName} notary commission certificate`,
+    },
+  ];
+  if (!rules || rules.enotary_registration_required !== false) {
+    docs.push({
+      key: 'electronicNotaryCert',
+      label: 'Electronic Notary Certificate',
+      desc: `${stateName} electronic notary registration certificate`,
+    });
+  }
+  docs.push({
+    key: 'renAuthorization',
+    label: 'RON Authorization',
+    desc: `${stateName} remote online notarization authorization`,
+  });
+  if (rules?.bond_required) {
+    docs.push({
+      key: 'suretyBond',
+      label: 'Surety Bond Proof',
+      desc: rules.ron_bond_additional_cents
+        ? `${money(bondTotal)} total bond (${money(rules.bond_amount_cents)} standard + ${money(rules.ron_bond_additional_cents)} RON) required by ${stateName} law`
+        : `${money(bondTotal)} surety bond as required by ${stateName} law`,
+    });
+  }
+  if (rules?.eo_required) {
+    docs.push({
+      key: 'eoPolicy',
+      label: 'E&O Insurance Policy',
+      desc: `Errors & Omissions insurance, ${money(rules.eo_min_amount_cents)} minimum, required by ${stateName}`,
+    });
+  } else {
+    docs.push({
+      key: 'eoPolicy',
+      label: 'E&O Insurance Policy (optional)',
+      desc: 'Errors & Omissions insurance policy — recommended',
+      optional: true,
+    });
+  }
+  docs.push({
+    key: 'digitalSignatureCert',
+    label: 'Digital Signature Certificate',
+    desc: 'Certificate from an approved TSA provider',
+  });
+  return docs;
+}
 
 export function OnboardStep2Documents() {
   const { nextStep, prevStep, updateData, data } = useOnboardingStore();
-  const [files, setFiles] = useState<Record<string, File | null>>({
-    commissionCert: null,
-    electronicNotaryCert: null,
-    renAuthorization: null,
-    suretyBond: null,
-    eoPolicy: null,
-    digitalSignatureCert: null,
-  });
+  const rules = (data.stateRules as any) || null;
+  const stateName = rules?.state_name || 'your state';
+  const docs = useMemo(() => buildDocs(rules), [rules]);
+  const requiredCount = docs.filter((d) => !d.optional).length;
+
+  const [files, setFiles] = useState<Record<string, File | null>>(
+    Object.fromEntries(docs.map((d) => [d.key, null]))
+  );
 
   const handleFile = (key: string, file: File | null) => {
     setFiles((prev) => ({ ...prev, [key]: file }));
   };
 
-  const allUploaded = Object.values(files).every((f) => f !== null);
+  const allUploaded = docs.filter((d) => !d.optional).every((d) => files[d.key]);
 
   const handleNext = () => {
     updateData(files);
@@ -51,12 +94,13 @@ export function OnboardStep2Documents() {
       <div>
         <h2 className="text-xl font-semibold text-gray-900">Upload Credentials</h2>
         <p className="mt-1 text-sm text-gray-500">
-          Upload all 6 required documents to verify your NC notary commission.
+          Upload the {requiredCount} required documents to verify your {stateName} notary
+          commission.
         </p>
       </div>
 
       <div className="space-y-4">
-        {requiredDocs.map(({ key, label, desc }) => (
+        {docs.map(({ key, label, desc }) => (
           <div
             key={key}
             className={`rounded-lg border-2 p-4 transition-colors ${

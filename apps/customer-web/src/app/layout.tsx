@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: 'SealProof — Remote Online Notarization',
   description: 'Notarize your documents from anywhere with a commissioned notary via secure video.',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/favicon.png',
   },
 };
 

@@ -83,6 +83,10 @@ const config = {
     recordingBucket: process.env.AWS_RECORDING_BUCKET || 'sealproof-recordings',
     documentBucket: process.env.AWS_DOCUMENT_BUCKET || 'sealproof-documents',
     kmsKeyId: process.env.AWS_KMS_KEY_ID || '',
+    // S3-compatible endpoint override (self-hosted MinIO). Empty = real AWS.
+    endpoint: process.env.S3_ENDPOINT || '',
+    // Local KMS master key (hex, 32 bytes). Set = envelope encryption without AWS KMS.
+    kmsMasterKey: process.env.KMS_MASTER_KEY || '',
   },
 
   // Timestamp Authority (RFC 3161)

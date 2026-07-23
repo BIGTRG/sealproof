@@ -19,6 +19,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { slug: str
 
 function handleProxy(req: NextRequest, slug: string[]) {
   const [service, ...rest] = slug;
-  const path = `/api/${rest.join('/')}`;
+  // Services mount their own path prefixes; forward the remainder verbatim
+  // and preserve the query string.
+  const search = req.nextUrl.search || '';
+  const path = `/${rest.join('/')}${search}`;
   return proxyRequest(service, path, req);
 }

@@ -8,7 +8,7 @@
  * GET   /journal/entries/:id              Get single entry
  */
 const router = require('express').Router();
-const { validate, audit, logger } = require('@sealproof/shared');
+const { validate, audit, logger, db } = require('@sealproof/shared');
 const JournalEntry = require('../models/journalEntry');
 const { verifyChain } = require('../utils/hashChain');
 
@@ -57,6 +57,32 @@ router.post('/entries',
 
 // ---------------------------------------------------------------------------
 // GET /journal/notary/:notaryId — Full journal for a notary
+
+// ---------------------------------------------------------------------------
+// GET /journal — Journal entries for the current notary (camelCase for UI)
+// TODO: resolve from Clerk-authenticated user; demo fallback until prod auth.
+// ---------------------------------------------------------------------------
+router.get('/', async (req, res, next) => {
+  try {
+    const r = await db.query(
+      `SELECT j.*, s.governing_state_code
+       FROM notary_journal_entries j
+       LEFT JOIN notarization_sessions s ON s.id = j.session_id
+       ORDER BY j.entry_sequence_number DESC LIMIT 100`
+    );
+    res.json(r.rows.map((e) => ({
+      id: e.id,
+      sequenceNumber: e.entry_sequence_number,
+      actDate: e.entry_timestamp,
+      notarizationAct: e.notarial_act_type,
+      signerName: e.signer_name,
+      documentType: e.document_description,
+      governingState: e.governing_state_code,
+      entryHash: e.entry_hash,
+    })));
+  } catch (err) { next(err); }
+});
+
 // ---------------------------------------------------------------------------
 router.get('/notary/:notaryId', async (req, res, next) => {
   try {

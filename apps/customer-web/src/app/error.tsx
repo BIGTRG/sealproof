@@ -1,9 +1,9 @@
 'use client';
 
-import {{ Button }} from '@/components/ui/Button';
-import {{ AlertTriangle }} from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { AlertTriangle } from 'lucide-react';
 
-export default function Error({{ error, reset }}: {{ error: Error & {{ digest?: string }}; reset: () => void }}) {{
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-warm">
       <div className="text-center max-w-md px-6">
@@ -14,8 +14,8 @@ export default function Error({{ error, reset }}: {{ error: Error & {{ digest?: 
         <p className="text-sm text-gray-500 mb-6">
           An unexpected error occurred. Our team has been notified.
         </p>
-        <Button variant="primary" onClick={{() => reset()}}>Try Again</Button>
+        <Button variant="primary" onClick={() => reset()}>Try Again</Button>
       </div>
     </div>
   );
-}}
+}

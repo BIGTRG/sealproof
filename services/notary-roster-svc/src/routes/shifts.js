@@ -8,7 +8,7 @@
  * GET    /shifts/notary/:notaryId List shifts for a notary
  */
 const router = require('express').Router();
-const { validate, audit, logger } = require('@sealproof/shared');
+const { validate, audit, logger, db } = require('@sealproof/shared');
 const Shift = require('../models/shift');
 const Presence = require('../models/presence');
 
@@ -137,6 +137,32 @@ router.post('/:id/check-out', async (req, res, next) => {
 
 // ---------------------------------------------------------------------------
 // GET /shifts/notary/:notaryId — List shifts for a notary
+
+// ---------------------------------------------------------------------------
+// GET /shifts/mine — Shifts for the current notary
+// TODO: resolve from Clerk-authenticated user; demo fallback until prod auth.
+// ---------------------------------------------------------------------------
+router.get('/mine', async (req, res, next) => {
+  try {
+    const n = await db.query(
+      'SELECT id FROM notaries WHERE is_active = true ORDER BY created_at ASC LIMIT 1'
+    );
+    if (!n.rows[0]) return res.json([]);
+    const r = await db.query(
+      'SELECT * FROM notary_shifts WHERE notary_id = $1 ORDER BY shift_start DESC LIMIT 20',
+      [n.rows[0].id]
+    );
+    res.json(r.rows.map((s) => ({
+      id: s.id,
+      startTime: s.shift_start,
+      endTime: s.shift_end,
+      status: s.status,
+      sessionsHandled: s.sessions_handled,
+      checkedInAt: s.checked_in_at,
+    })));
+  } catch (err) { next(err); }
+});
+
 // ---------------------------------------------------------------------------
 router.get('/notary/:notaryId', async (req, res, next) => {
   try {

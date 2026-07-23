@@ -61,7 +61,16 @@ router.get('/queue', async (req, res, next) => {
       state: req.query.state,
       sessionType: req.query.session_type,
     });
-    res.json({ data: queue, count: queue.length });
+    res.json({
+      data: queue.map((s) => ({
+        ...s,
+        documentType: s.document_type,
+        signerCount: s.signer_count,
+        serviceLevel: s.ron_session_type,
+        queuedAt: s.queued_at,
+      })),
+      count: queue.length,
+    });
   } catch (err) {
     next(err);
   }

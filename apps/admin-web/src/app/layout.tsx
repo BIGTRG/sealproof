@@ -7,6 +7,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'sw
 const cormorant = Cormorant_Garamond({ subsets: ['latin'], weight: ['400','500','600','700'], variable: '--font-cormorant', display: 'swap' });
 
 export const metadata: Metadata = {
+  icons: { icon: '/favicon.png' },
   title: 'SealProof Admin Console',
   description: 'Manage notaries, sessions, compliance, and business operations.',
 };

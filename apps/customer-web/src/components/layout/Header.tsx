@@ -31,9 +31,7 @@ export function Header() {
               <img src={branding.logoUrl} alt={companyName} className="h-8 w-auto" />
             ) : (
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-950">
-                  <span className="text-sm font-bold text-white">S</span>
-                </div>
+                <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 rounded-full object-cover" />
                 <span className="text-lg font-semibold text-gray-900">{companyName}</span>
               </div>
             )}

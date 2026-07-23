@@ -13,7 +13,7 @@ export default function EarningsPage() {
 
   useEffect(() => {
     Promise.all([
-      api.getEarnings(),
+      api.getMyEarnings(),
       api.getPayoutHistory(),
     ]).then(([e, p]) => {
       setEarnings(e);

@@ -30,11 +30,51 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 const AUTH_TAG_LENGTH = 16;
 
+// Local KMS mode: when KMS_MASTER_KEY is set, DEKs are generated locally and
+// wrapped with the master key (AES-256-GCM, AAD-bound to the session id).
+// Wrapped blob format: 'LKW1' | 12-byte IV | 16-byte tag | wrapped key.
+const LOCAL_MASTER_KEY = config.aws.kmsMasterKey
+  ? Buffer.from(config.aws.kmsMasterKey, 'hex')
+  : null;
+if (LOCAL_MASTER_KEY && LOCAL_MASTER_KEY.length !== 32) {
+  throw new Error('KMS_MASTER_KEY must be 32 bytes hex (64 chars)');
+}
+
+function wrapKeyLocal(plaintextKey, sessionId) {
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, LOCAL_MASTER_KEY, iv, { authTagLength: AUTH_TAG_LENGTH });
+  cipher.setAAD(Buffer.from(`sealproof:${sessionId}`));
+  const wrapped = Buffer.concat([cipher.update(plaintextKey), cipher.final()]);
+  return Buffer.concat([Buffer.from('LKW1'), iv, cipher.getAuthTag(), wrapped]);
+}
+
+function unwrapKeyLocal(blob, sessionId) {
+  const buf = Buffer.from(blob);
+  if (buf.subarray(0, 4).toString() !== 'LKW1') {
+    throw new Error('Not a locally-wrapped key');
+  }
+  const iv = buf.subarray(4, 4 + IV_LENGTH);
+  const tag = buf.subarray(4 + IV_LENGTH, 4 + IV_LENGTH + AUTH_TAG_LENGTH);
+  const wrapped = buf.subarray(4 + IV_LENGTH + AUTH_TAG_LENGTH);
+  const decipher = crypto.createDecipheriv(ALGORITHM, LOCAL_MASTER_KEY, iv, { authTagLength: AUTH_TAG_LENGTH });
+  decipher.setAAD(Buffer.from(`sealproof:${sessionId}`));
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(wrapped), decipher.final()]);
+}
+
 /**
  * Generate a per-session data encryption key via KMS.
  * Returns { plaintextKey (Buffer), encryptedKey (Buffer) }
  */
 async function generateDataKey(sessionId) {
+  if (LOCAL_MASTER_KEY) {
+    const plaintextKey = crypto.randomBytes(32);
+    return {
+      plaintextKey,
+      encryptedKey: wrapKeyLocal(plaintextKey, sessionId),
+      keyId: 'local-master-v1',
+    };
+  }
   const command = new GenerateDataKeyCommand({
     KeyId: KMS_KEY_ID,
     KeySpec: 'AES_256',
@@ -56,6 +96,9 @@ async function generateDataKey(sessionId) {
  * Decrypt an encrypted DEK via KMS.
  */
 async function decryptDataKey(encryptedKey, sessionId) {
+  if (LOCAL_MASTER_KEY) {
+    return unwrapKeyLocal(encryptedKey, sessionId);
+  }
   const command = new DecryptCommand({
     CiphertextBlob: encryptedKey,
     EncryptionContext: {

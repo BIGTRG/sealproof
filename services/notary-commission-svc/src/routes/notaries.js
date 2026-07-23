@@ -12,7 +12,7 @@
  * GET    /notaries/expiring-credentials   Notaries with credentials expiring in 30d
  */
 const router = require('express').Router();
-const { validate, audit, logger } = require('@sealproof/shared');
+const { validate, audit, logger, db } = require('@sealproof/shared');
 const Notary = require('../models/notary');
 
 // ---------------------------------------------------------------------------
@@ -97,6 +97,43 @@ router.get('/', async (req, res, next) => {
 
 // ---------------------------------------------------------------------------
 // GET /notaries/:id — Get notary by ID
+
+// ---------------------------------------------------------------------------
+// GET /notaries/me — Current notary profile with dashboard aggregates
+// TODO: resolve from Clerk-authenticated user; demo fallback until prod auth.
+// Must be before /:id to avoid route collision
+// ---------------------------------------------------------------------------
+router.get('/me', async (req, res, next) => {
+  try {
+    const n = await db.query(
+      'SELECT * FROM notaries WHERE is_active = true ORDER BY created_at ASC LIMIT 1'
+    );
+    if (!n.rows[0]) return res.status(404).json({ error: { message: 'Notary not found' } });
+    const notary = n.rows[0];
+    const agg = await db.query(
+      `SELECT
+        COUNT(*) FILTER (WHERE completed_at::date = CURRENT_DATE) AS today_n,
+        COUNT(*) FILTER (WHERE completed_at >= date_trunc('week', now())) AS week_n,
+        COALESCE(SUM(notary_payout_cents) FILTER (WHERE completed_at::date = CURRENT_DATE), 0) AS today_c
+       FROM notarization_sessions WHERE notary_id = $1 AND status = 'completed'`,
+      [notary.id]
+    );
+    const a = agg.rows[0];
+    res.json({
+      id: notary.id,
+      fullName: notary.full_legal_name,
+      state: notary.state,
+      commissionNumber: notary.commission_number,
+      commissionExpiresAt: notary.commission_expires_at,
+      eandoProvider: notary.eando_provider,
+      status: notary.status,
+      sessionsToday: Number(a.today_n),
+      sessionsThisWeek: Number(a.week_n),
+      earningsToday: a.today_c / 100,
+    });
+  } catch (err) { next(err); }
+});
+
 // ---------------------------------------------------------------------------
 router.get('/:id', async (req, res, next) => {
   try {

@@ -16,9 +16,7 @@ export default function SignUpPage() {
           }}
         />
         <div className="relative text-center px-12">
-          <div className="seal-stamp inline-flex h-16 w-16 items-center justify-center mx-auto mb-8">
-            <Scale className="h-8 w-8 text-gold-300" />
-          </div>
+          <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 rounded-full object-cover" />
           <h2 className="font-display text-3xl text-white font-semibold">
             SealProof
           </h2>

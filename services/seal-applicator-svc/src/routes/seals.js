@@ -20,6 +20,7 @@ const { config } = require('@sealproof/shared');
 
 const s3 = new S3Client({
   region: config.aws.region,
+  ...(config.aws.endpoint ? { endpoint: config.aws.endpoint, forcePathStyle: true } : {}),
   credentials: {
     accessKeyId: config.aws.accessKeyId,
     secretAccessKey: config.aws.secretAccessKey,

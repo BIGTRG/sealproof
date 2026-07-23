@@ -11,6 +11,7 @@ const helmet = require('helmet');
 const { config, requestLogger, errorHandler, logger } = require('@sealproof/shared');
 
 const paymentRoutes = require('./routes/payments');
+const payoutRoutes = require('./routes/payouts');
 const subscriptionRoutes = require('./routes/subscriptions');
 const webhookRoutes = require('./routes/webhooks');
 const healthRoutes = require('./routes/health');
@@ -24,6 +25,7 @@ app.use(requestLogger);
 
 app.use('/health', healthRoutes);
 app.use('/payments', paymentRoutes);
+app.use('/payouts', payoutRoutes);
 app.use('/subscriptions', subscriptionRoutes);
 app.use('/payments', webhookRoutes);
 

@@ -12,9 +12,7 @@ export default function AdminSignIn() {
           style={{ backgroundImage: `radial-gradient(circle at 50% 50%, rgba(197,160,94,0.25) 0%, transparent 60%)` }}
         />
         <div className="relative text-center px-12">
-          <div className="seal-stamp inline-flex h-16 w-16 items-center justify-center mx-auto mb-8">
-            <Scale className="h-8 w-8 text-gold-300" />
-          </div>
+          <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 rounded-full object-cover" />
           <h2 className="font-display text-3xl text-white font-semibold">Admin Console</h2>
           <p className="mt-4 text-gray-400 max-w-sm mx-auto leading-relaxed">
             Manage platform operations, notaries, compliance, and financials.

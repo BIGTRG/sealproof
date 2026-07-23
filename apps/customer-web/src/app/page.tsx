@@ -30,9 +30,7 @@ export default function LandingPage() {
       <header className="border-b border-gray-100 bg-white/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="seal-stamp flex h-9 w-9 items-center justify-center !p-0 !border-gold-300">
-              <Scale className="h-4 w-4 text-gold-300" />
-            </div>
+            <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 rounded-full object-cover" />
             <span className="text-lg font-display font-semibold text-navy-700 tracking-tight">
               {companyName}
             </span>
