@@ -14,8 +14,8 @@ export default function NotaryLandingPage() {
       <header className="border-b border-gray-100 bg-white/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 rounded-full object-cover" />
-            <span className="text-2xl font-script text-navy-700">SealProof</span>
+            <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 object-contain drop-shadow-[0_0_6px_rgba(197,160,94,0.45)]" />
+            <span className="text-2xl font-script text-navy-700">Seal<span className="text-brand-300">Proof</span></span>
             <Badge variant="gold" className="ml-1">Notary Portal</Badge>
           </div>
           <div className="flex items-center gap-3">

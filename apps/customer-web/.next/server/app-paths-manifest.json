@@ -1,13 +1,13 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/api/[...slug]/route": "app/api/[...slug]/route.js",
-  "/api/health/route": "app/api/health/route.js",
   "/auth/sign-in/page": "app/auth/sign-in/page.js",
   "/auth/sign-up/page": "app/auth/sign-up/page.js",
   "/page": "app/page.js",
   "/session/new/page": "app/session/new/page.js",
+  "/api/[...slug]/route": "app/api/[...slug]/route.js",
+  "/api/health/route": "app/api/health/route.js",
   "/dashboard/documents/page": "app/dashboard/documents/page.js",
-  "/dashboard/settings/page": "app/dashboard/settings/page.js",
   "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/settings/page": "app/dashboard/settings/page.js",
   "/dashboard/sessions/page": "app/dashboard/sessions/page.js"
 }

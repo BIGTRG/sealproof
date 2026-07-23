@@ -25,7 +25,7 @@ export default function TenantsPage() {
                 <span className="text-sm font-display font-bold text-gold-300">SP</span>
               </div>
               <div>
-                <div className="text-xl font-script text-navy-700">SealProof</div>
+                <div className="text-xl font-script text-navy-700">Seal<span className="text-brand-300">Proof</span></div>
                 <div className="text-xs text-gray-400">sealproof.ai</div>
               </div>
             </div>

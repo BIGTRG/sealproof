@@ -13,7 +13,7 @@ export default function SignUpPage() {
           style={{ backgroundImage: `radial-gradient(circle at 50% 50%, rgba(197,160,94,0.25) 0%, transparent 60%)` }}
         />
         <div className="relative text-center px-12">
-          <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 rounded-full object-cover" />
+          <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 object-contain drop-shadow-[0_0_6px_rgba(197,160,94,0.45)]" />
           <h2 className="font-display text-3xl text-white font-semibold">Join SealProof</h2>
           <p className="mt-4 text-gray-400 max-w-sm mx-auto leading-relaxed">
             Apply to join the notary network. Onboarding takes less than 24 hours.

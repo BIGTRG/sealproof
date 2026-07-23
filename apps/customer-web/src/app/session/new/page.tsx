@@ -58,7 +58,7 @@ export default function NewSessionPage() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 flex h-14 items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
             <Scale className="h-5 w-5 text-gold-400" />
-            <span className="text-2xl font-script text-navy-700">SealProof</span>
+            <span className="text-2xl font-script text-navy-700">Seal<span className="text-brand-300">Proof</span></span>
           </Link>
           <span className="text-sm text-gray-400">New Notarization Session</span>
         </div>

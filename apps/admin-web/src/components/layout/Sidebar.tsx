@@ -26,9 +26,9 @@ export function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-navy-700 text-white">
       <div className="flex h-16 items-center gap-2.5 px-6 border-b border-navy-500">
-        <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 rounded-full object-cover" />
+        <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 object-contain drop-shadow-[0_0_6px_rgba(197,160,94,0.45)]" />
         <div>
-          <span className="text-xl font-script text-white">SealProof</span>
+          <span className="text-xl font-script text-white">Seal<span className="text-brand-300">Proof</span></span>
           <span className="block text-[10px] text-gold-300 font-medium tracking-wide uppercase">Admin Console</span>
         </div>
       </div>

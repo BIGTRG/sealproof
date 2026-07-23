@@ -30,9 +30,9 @@ export default function LandingPage() {
       <header className="border-b border-gray-100 bg-white/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 rounded-full object-cover" />
+            <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 object-contain drop-shadow-[0_0_6px_rgba(197,160,94,0.45)]" />
             <span className="text-2xl font-script text-navy-700">
-              {companyName}
+              Seal<span className="text-brand-300">Proof</span>
             </span>
           </div>
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
@@ -391,7 +391,7 @@ export default function LandingPage() {
             <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
                 <Scale className="h-5 w-5 text-gold-300" />
-                <span className="text-2xl font-script text-white">{companyName}</span>
+                <span className="text-2xl font-script text-white">Seal<span className="text-brand-300">Proof</span></span>
               </div>
               <p className="text-sm leading-relaxed max-w-sm">
                 Remote online notarization built to the legal standard.
