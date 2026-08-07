@@ -78,13 +78,16 @@ router.post('/:sessionId/tokens',
 
       const token = await livekit.generateToken(sessionId, { identity, name, role });
 
-      await audit.emitAuditLog({
-        eventType: 'livekit.token_issued',
-        actorType: role,
-        actorId: identity,
-        sessionId,
-        payload: { participant_name: name, role },
-      });
+      try {
+        await audit.emitAuditLog({
+          eventType: 'livekit.token_issued',
+          actorType: ['customer', 'notary'].includes(role) ? role : 'system',
+          sessionId,
+          payload: { participant_name: name, role, identity },
+        });
+      } catch (auditErr) {
+        logger.warn('Audit log failed for token issuance', { sessionId, error: auditErr.message });
+      }
 
       res.json({ data: { token, room_name: livekit.roomName(sessionId), role } });
     } catch (err) {

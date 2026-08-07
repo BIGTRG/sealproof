@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { Card } from '@/components/ui/Card';
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import * as api from '@/lib/api';
+import { SessionVideo } from '@/components/session/SessionVideo';
 import {
-  Video, Mic, MicOff, VideoOff, Phone,
   ShieldCheck, FileText, PenTool, Stamp, BookOpen, CheckCircle,
-  ChevronRight,
+  ChevronRight, Circle, Square,
 } from 'lucide-react';
 
 const WORKFLOW_STEPS = [
@@ -23,27 +22,66 @@ const WORKFLOW_STEPS = [
 
 export default function ActiveSessionPage() {
   const params = useParams();
+  const router = useRouter();
   const sessionId = params.id as string;
   const [currentStep, setCurrentStep] = useState(0);
   const [session, setSession] = useState<any>(null);
-  const [videoOn, setVideoOn] = useState(true);
-  const [audioOn, setAudioOn] = useState(true);
+  const [token, setToken] = useState('');
+  const [joinError, setJoinError] = useState('');
+  const [recording, setRecording] = useState(false);
+  const [recordingBusy, setRecordingBusy] = useState(false);
+  const serverUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || '';
 
   useEffect(() => {
     api.getSessionById(sessionId).then(setSession);
+
+    let cancelled = false;
+    const join = async () => {
+      try {
+        await api.createLivekitRoom(sessionId).catch(() => undefined);
+        const res = await api.getLivekitToken(sessionId, {
+          identity: `notary-${sessionId}`,
+          name: 'Notary',
+          role: 'notary',
+        });
+        if (!cancelled && res?.data?.token) {
+          setToken(res.data.token);
+        } else if (!cancelled) {
+          setJoinError('Could not join the video room. Refresh to retry.');
+        }
+      } catch {
+        if (!cancelled) setJoinError('Could not join the video room. Refresh to retry.');
+      }
+    };
+    join();
+    return () => { cancelled = true; };
   }, [sessionId]);
+
+  const toggleRecording = useCallback(async () => {
+    if (recordingBusy) return;
+    setRecordingBusy(true);
+    try {
+      if (recording) {
+        await api.stopSessionRecording(sessionId);
+        setRecording(false);
+      } else {
+        await api.startSessionRecording(sessionId);
+        setRecording(true);
+      }
+    } finally {
+      setRecordingBusy(false);
+    }
+  }, [recording, recordingBusy, sessionId]);
 
   const advanceStep = async () => {
     if (currentStep === 3) {
-      // Apply seal
       await api.applySeal(sessionId, session?.documentId ?? sessionId, {});
     }
     if (currentStep === 4) {
-      // Confirm journal
       await api.confirmJournalEntry(sessionId);
     }
     if (currentStep === 5) {
-      // Complete session
+      if (recording) await api.stopSessionRecording(sessionId).catch(() => undefined);
       await api.completeSession(sessionId);
     }
     setCurrentStep(Math.min(currentStep + 1, WORKFLOW_STEPS.length - 1));
@@ -56,44 +94,38 @@ export default function ActiveSessionPage() {
         <div className="flex items-center gap-3">
           <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
           <span className="text-sm font-semibold">Live Session</span>
-          <Badge variant="gold">{session?.documentType?.replace(/_/g, ' ') || 'Loading...'}</Badge>
+          <Badge variant="gold">{session?.documentType?.replace(/_/g, ' ') || 'Session'}</Badge>
         </div>
-        <div className="text-xs text-gray-400">
-          Session ID: {sessionId.slice(0, 8)}...
+        <div className="flex items-center gap-4">
+          <button
+            onClick={toggleRecording}
+            disabled={recordingBusy || !token}
+            className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-50 ${
+              recording ? 'bg-red-500/20 text-red-300 border border-red-500/50' : 'bg-white/10 hover:bg-white/20'
+            }`}
+          >
+            {recording ? <Square className="h-3 w-3 fill-current" /> : <Circle className="h-3 w-3 fill-red-500 text-red-500" />}
+            {recording ? 'Stop Recording' : 'Start Recording'}
+          </button>
+          <div className="text-xs text-gray-400">Session ID: {sessionId.slice(0, 8)}...</div>
         </div>
       </header>
 
       <div className="flex h-[calc(100vh-52px)]">
         {/* Left: Video */}
-        <div className="flex-1 relative flex items-center justify-center bg-navy-900">
-          <div className="text-center">
-            <Video className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-sm text-gray-500">LiveKit video session active</p>
-            <p className="text-xs text-gray-600 mt-1">Encrypted and recording</p>
-          </div>
-
-          {/* Video controls */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3">
-            <button
-              onClick={() => setAudioOn(!audioOn)}
-              className={`flex h-12 w-12 items-center justify-center rounded-full transition-all ${
-                audioOn ? 'bg-white/10 hover:bg-white/20' : 'bg-red-500'
-              }`}
-            >
-              {audioOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-            </button>
-            <button
-              onClick={() => setVideoOn(!videoOn)}
-              className={`flex h-12 w-12 items-center justify-center rounded-full transition-all ${
-                videoOn ? 'bg-white/10 hover:bg-white/20' : 'bg-red-500'
-              }`}
-            >
-              {videoOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
-            </button>
-            <button className="flex h-12 w-12 items-center justify-center rounded-full bg-red-600 hover:bg-red-700 transition-all">
-              <Phone className="h-5 w-5 rotate-[135deg]" />
-            </button>
-          </div>
+        <div className="flex-1 relative bg-navy-900">
+          {joinError ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <p className="text-sm text-red-400">{joinError}</p>
+            </div>
+          ) : (
+            <SessionVideo
+              token={token}
+              serverUrl={serverUrl}
+              className="absolute inset-0"
+              onLeave={() => router.push('/dashboard')}
+            />
+          )}
         </div>
 
         {/* Right: Workflow panel */}

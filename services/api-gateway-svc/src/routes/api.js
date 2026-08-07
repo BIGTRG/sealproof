@@ -16,15 +16,45 @@ const { audit, logger, db, config } = require('@sealproof/shared');
 
 const ORCHESTRATOR = `http://localhost:${config.ports.orchestrator}`;
 
+// Resolve (or auto-provision) a customer record for an API-partner session.
+// The B2B path has no interactive signup; sessions are keyed to the primary
+// signer's email under the partner's account.
+async function resolveApiCustomer(partner, signers) {
+  const primary = (Array.isArray(signers) && signers[0]) || {};
+  const email = String(primary.email || partner.contact_email || '').toLowerCase();
+  const name = primary.name || partner.partner_name || 'API Signer';
+  if (!email) throw Object.assign(new Error('signers[0].email is required'), { status: 400 });
+  const existing = await db.query(
+    'SELECT id FROM customers WHERE api_partner_id = $1 AND lower(email) = $2 LIMIT 1',
+    [partner.id, email]
+  );
+  if (existing.rows[0]) return existing.rows[0].id;
+  const clerkId = `api_${partner.id}_${email}`;
+  const user = await db.query(
+    `INSERT INTO users (clerk_id, email, full_name, role) VALUES ($1, $2, $3, 'customer')
+     ON CONFLICT (clerk_id) DO UPDATE SET email = EXCLUDED.email RETURNING id`,
+    [clerkId, email, name]
+  );
+  const cust = await db.query(
+    `INSERT INTO customers (user_id, full_legal_name, email, customer_type, api_partner_id)
+     VALUES ($1, $2, $3, 'individual', $4) RETURNING id`,
+    [user.rows[0].id, name, email, partner.id]
+  );
+  return cust.rows[0].id;
+}
+
 // POST /v1/sessions — Create session via API
 router.post('/sessions', async (req, res, next) => {
   try {
     const { document_type, signers, priority, callback_url } = req.body;
 
     // Create session via orchestrator
+    const customerId = await resolveApiCustomer(req.partner, signers);
     const orchRes = await axios.post(`${ORCHESTRATOR}/sessions`, {
+      customer_id: customerId,
       document_type,
       signers,
+      signer_count: Array.isArray(signers) ? Math.max(signers.length, 1) : 1,
       priority: priority || 'standard',
       source: 'api',
       api_partner_id: req.partner.id,
@@ -60,7 +90,7 @@ router.post('/sessions', async (req, res, next) => {
 router.get('/sessions/:id', async (req, res, next) => {
   try {
     const session = await db.query(
-      `SELECT id, status, priority, document_type, created_at, session_started_at, session_ended_at
+      `SELECT id, status, document_type, created_at, session_started_at, session_ended_at
        FROM notarization_sessions WHERE id = $1 AND api_partner_id = $2`,
       [req.params.id, req.partner.id]
     );
@@ -88,9 +118,14 @@ router.get('/sessions/:id/documents', async (req, res, next) => {
 // POST /v1/sessions/:id/cancel
 router.post('/sessions/:id/cancel', async (req, res, next) => {
   try {
-    const orchRes = await axios.post(`${ORCHESTRATOR}/sessions/${req.params.id}/transition`, {
-      to: 'failed',
-      reason: 'Cancelled by API partner',
+    // Verify the session belongs to this partner before cancelling.
+    const owned = await db.query(
+      'SELECT id FROM notarization_sessions WHERE id = $1 AND api_partner_id = $2',
+      [req.params.id, req.partner.id]
+    );
+    if (!owned.rows[0]) return res.status(404).json({ error: { message: 'Session not found' } });
+    const orchRes = await axios.post(`${ORCHESTRATOR}/sessions/${req.params.id}/cancel`, {
+      reason: req.body.reason || 'Cancelled by API partner',
     });
     res.json(orchRes.data);
   } catch (err) { next(err); }

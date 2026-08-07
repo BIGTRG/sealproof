@@ -102,11 +102,20 @@ export const completeSession = (sessionId: string) =>
 
 /* ─── LiveKit ────────────────────────────────────────────── */
 
-export const getLivekitToken = (sessionId: string) =>
-  request<{ token: string }>(`http://localhost:4005/rooms/${sessionId}/token`, {
+export const createLivekitRoom = (sessionId: string) =>
+  request<any>(`${PROXY}/livekit/rooms/${sessionId}`, { method: 'POST', body: JSON.stringify({}) });
+
+export const getLivekitToken = (sessionId: string, participant: { identity: string; name: string; role: string }) =>
+  request<{ data: { token: string; room_name: string } }>(`${PROXY}/livekit/rooms/${sessionId}/tokens`, {
     method: 'POST',
-    body: JSON.stringify({ role: 'notary' }),
+    body: JSON.stringify(participant),
   });
+
+export const startSessionRecording = (sessionId: string) =>
+  request<any>(`${PROXY}/livekit/rooms/${sessionId}/start-recording`, { method: 'POST', body: JSON.stringify({}) });
+
+export const stopSessionRecording = (sessionId: string) =>
+  request<any>(`${PROXY}/livekit/rooms/${sessionId}/stop-recording`, { method: 'POST', body: JSON.stringify({}) });
 
 /* ─── E-Sign ─────────────────────────────────────────────── */
 

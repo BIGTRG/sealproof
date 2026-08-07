@@ -3,48 +3,70 @@
 import { useState, useEffect } from 'react';
 import { useSessionWizard } from '@/lib/store';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import * as api from '@/lib/api';
-import { Video, Mic, MicOff, VideoOff, Phone, Shield, FileCheck, Stamp } from 'lucide-react';
+import { SessionVideo } from '@/components/session/SessionVideo';
+import { Shield, FileCheck, Stamp } from 'lucide-react';
 
 /**
  * Step 9 — Live Video Session
  * Customer-side view of the notarization session.
- * LiveKit video connects here; notary controls the workflow.
+ * Joins the LiveKit room for this session; the notary controls the workflow.
  */
 export function StepLiveSession() {
-  const { sessionId, nextStep } = useSessionWizard();
+  const wizard = useSessionWizard() as any;
+  const { sessionId, nextStep } = wizard;
   const [token, setToken] = useState('');
-  const [roomName, setRoomName] = useState('');
+  const [joinError, setJoinError] = useState('');
   const [sessionStatus, setSessionStatus] = useState('in_progress');
-  const [videoOn, setVideoOn] = useState(true);
-  const [audioOn, setAudioOn] = useState(true);
+  const serverUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || '';
 
   useEffect(() => {
     if (!sessionId) return;
+    let cancelled = false;
 
-    // Get LiveKit token
-    api.getLivekitToken(sessionId).then((res) => {
-      if (res.data) {
-        setToken(res.data.token);
-        setRoomName(res.data.roomName);
+    const join = async () => {
+      try {
+        // Ensure the room exists (idempotent; 409 means already created)
+        await api.createLivekitRoom(sessionId).catch(() => undefined);
+        const signerName =
+          wizard.data?.signers?.find((s: any) => s.isPrimary)?.name ||
+          wizard.data?.signers?.[0]?.name ||
+          'Signer';
+        const res = await api.getLivekitToken(sessionId, {
+          identity: `customer-${sessionId}`,
+          name: signerName,
+          role: 'customer',
+        });
+        const tok = (res.data as any)?.data?.token || (res.data as any)?.token;
+        if (!cancelled && tok) {
+          setToken(tok);
+        } else if (!cancelled) {
+          setJoinError('Could not join the video session. Please refresh the page.');
+        }
+      } catch {
+        if (!cancelled) setJoinError('Could not join the video session. Please refresh the page.');
       }
-    });
+    };
+    join();
 
-    // Poll session status
+    // Poll session status; the notary drives the workflow to completion
     const interval = setInterval(async () => {
       const res = await api.getSession(sessionId);
-      if (res.data?.session) {
-        setSessionStatus(res.data.session.status);
-        if (res.data.session.status === 'completed') {
+      const sess = (res.data as any)?.session || (res.data as any)?.data?.session;
+      if (sess) {
+        setSessionStatus(sess.status);
+        if (sess.status === 'completed') {
           clearInterval(interval);
           nextStep();
         }
       }
     }, 5000);
 
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [sessionId, nextStep]);
 
   return (
@@ -64,40 +86,13 @@ export function StepLiveSession() {
 
       {/* Video area */}
       <Card className="!p-0 overflow-hidden bg-navy-800 aspect-video relative">
-        {/* In production, LiveKit video tracks mount here */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <Video className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-            <p className="text-sm text-gray-400">
-              {token ? 'Connecting to video session...' : 'Waiting for video token...'}
-            </p>
+        {joinError ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <p className="text-sm text-red-400">{joinError}</p>
           </div>
-        </div>
-
-        {/* Controls overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-navy-900/90 to-transparent p-6">
-          <div className="flex items-center justify-center gap-4">
-            <button
-              onClick={() => setAudioOn(!audioOn)}
-              className={`flex h-12 w-12 items-center justify-center rounded-full transition-all ${
-                audioOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'
-              }`}
-            >
-              {audioOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-            </button>
-            <button
-              onClick={() => setVideoOn(!videoOn)}
-              className={`flex h-12 w-12 items-center justify-center rounded-full transition-all ${
-                videoOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'
-              }`}
-            >
-              {videoOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
-            </button>
-            <button className="flex h-12 w-12 items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-700 transition-all">
-              <Phone className="h-5 w-5 rotate-[135deg]" />
-            </button>
-          </div>
-        </div>
+        ) : (
+          <SessionVideo token={token} serverUrl={serverUrl} className="absolute inset-0" />
+        )}
       </Card>
 
       {/* Session progress */}

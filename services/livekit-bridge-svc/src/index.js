@@ -23,6 +23,7 @@ app.use(requestLogger);
 
 app.use('/health', healthRoutes);
 app.use('/rooms', roomRoutes);
+app.use('/api/rooms', roomRoutes); // compat: customer-web proxy prefixes /api
 
 app.use(errorHandler);
 

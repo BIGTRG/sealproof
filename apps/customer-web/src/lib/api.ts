@@ -188,8 +188,18 @@ export async function getKbaStatus(sessionId: string, signerId: string): Promise
 
 // ─── LiveKit ────────────────────────────────────────────────────────────────
 
-export async function getLivekitToken(sessionId: string): Promise<ApiResponse<{ token: string; roomName: string }>> {
-  return request(`${LIVEKIT_SVC}/api/livekit/${sessionId}/token?role=customer`);
+export async function createLivekitRoom(sessionId: string): Promise<ApiResponse<any>> {
+  return request(`${LIVEKIT_SVC}/rooms/${sessionId}`, { method: 'POST', body: JSON.stringify({}) });
+}
+
+export async function getLivekitToken(
+  sessionId: string,
+  participant: { identity: string; name: string; role: string }
+): Promise<ApiResponse<{ token: string; room_name: string }>> {
+  return request(`${LIVEKIT_SVC}/rooms/${sessionId}/tokens`, {
+    method: 'POST',
+    body: JSON.stringify(participant),
+  });
 }
 
 // ─── Payment ────────────────────────────────────────────────────────────────
