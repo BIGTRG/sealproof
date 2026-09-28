@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTenantStore } from '@/lib/store';
+import { BrandMark } from '@/components/BrandMark';
 import { cn } from '@/lib/utils';
 import { FileText, Clock, FolderOpen, Settings, Menu, X } from 'lucide-react';
 import { useState } from 'react';
@@ -27,14 +28,7 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo / Brand */}
           <Link href="/dashboard" className="flex items-center gap-2">
-            {branding?.logoUrl ? (
-              <img src={branding.logoUrl} alt={companyName} className="h-8 w-auto" />
-            ) : (
-              <div className="flex items-center gap-2">
-                <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 object-contain drop-shadow-[0_0_6px_rgba(197,160,94,0.45)]" />
-                <span className="text-lg font-semibold text-gray-900">{companyName}</span>
-              </div>
-            )}
+            <BrandMark size="sm" />
           </Link>
 
           {/* Desktop Nav */}

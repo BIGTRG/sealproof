@@ -27,11 +27,18 @@ router.post('/',
       const apiKey = generateApiKey();
       const apiSecret = generateApiSecret();
 
+      // Legacy NOT NULL columns (business_name, primary_contact_*, api_key_hash,
+      // pricing) are filled from the v2 fields so the insert satisfies both schemas.
+      const contactName = req.body.contact_name || partner_name;
+      const apiKeyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
+      const pricing = { starter: [0, 2500], growth: [29900, 1500], enterprise: [0, 0] }[subscription_tier || 'starter'] || [0, 2500];
       const result = await db.query(
-        `INSERT INTO api_partners (id, partner_name, contact_email, api_key, api_secret, subscription_tier, status)
-         VALUES ($1, $2, $3, $4, $5, $6, 'active')
+        `INSERT INTO api_partners (id, partner_name, contact_email, api_key, api_secret, subscription_tier, status,
+                                  business_name, primary_contact_email, primary_contact_name, api_key_hash,
+                                  monthly_subscription_cents, per_session_cents)
+         VALUES ($1, $2, $3, $4, $5, $6, 'active', $2, $3, $7, $8, $9, $10)
          RETURNING id, partner_name, api_key, subscription_tier, status, created_at`,
-        [uuid(), partner_name, contact_email, apiKey, apiSecret, subscription_tier || 'starter']
+        [uuid(), partner_name, contact_email || '', apiKey, apiSecret, subscription_tier || 'starter', contactName, apiKeyHash, pricing[0], pricing[1]]
       );
 
       await audit.emitAuditLog({ eventType: 'api.key_created', actorType: 'admin', payload: { partner_name, tier: subscription_tier } });

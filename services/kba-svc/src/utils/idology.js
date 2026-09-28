@@ -36,7 +36,55 @@ const idologyClient = axios.create({
  * @param {number} options.questionCount — number of questions (default 5)
  * @returns {object} { sessionId, questions: [{ id, text, choices }], expiresAt }
  */
+/**
+ * Sandbox mode: KBA_MODE=sandbox, or IDology credentials missing. Presents a
+ * fixed, clearly-labelled question set; the first choice of each question is
+ * correct. Used to exercise the flow before production credentials land.
+ */
+function isSandbox() {
+  if (process.env.KBA_MODE === 'sandbox') return true;
+  if (process.env.KBA_MODE === 'live') return false;
+  return !config.idology?.username || !config.idology?.password;
+}
+
+const SANDBOX_QUESTIONS = [
+  { id: 'street', text: 'Which of the following streets have you previously lived on?', choices: ['Maple Avenue', 'Ridgecrest Drive', 'Harbor Lane', 'None of the above'] },
+  { id: 'vehicle', text: 'Which vehicle have you owned or leased?', choices: ['Honda Accord', 'Ford F-150', 'Toyota Camry', 'None of the above'] },
+  { id: 'county', text: 'In which county have you lived?', choices: ['Wake County', 'Mecklenburg County', 'Guilford County', 'None of the above'] },
+  { id: 'lender', text: 'With which lender have you held a loan?', choices: ['Truist', 'Wells Fargo', 'Navy Federal', 'None of the above'] },
+  { id: 'employer', text: 'Which of these has been an employer of yours?', choices: ['Carolina Health Partners', 'Blue Ridge Logistics', 'Piedmont Software', 'None of the above'] },
+];
+
+function sandboxStart() {
+  const shuffle = (arr) => arr.map((v) => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+  const questions = SANDBOX_QUESTIONS.map((q) => {
+    const order = shuffle([0, 1, 2, 3]);
+    return {
+      id: q.id,
+      text: q.text,
+      choices: order.map((orig) => ({ id: `${orig + 1}`, text: q.choices[orig] })),
+    };
+  });
+  return {
+    sessionId: `sbx_kba_${Date.now().toString(36)}`,
+    questions,
+    questionCount: questions.length,
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    mode: 'sandbox',
+  };
+}
+
+function sandboxSubmit(answers, minCorrect) {
+  const correctCount = answers.filter((a) => String(a.answerId) === '1').length;
+  const passed = correctCount >= minCorrect;
+  return { passed, correctCount, totalQuestions: SANDBOX_QUESTIONS.length, minRequired: minCorrect, details: { result: passed ? 'pass' : 'fail', challengeAvailable: false, mode: 'sandbox' } };
+}
+
 async function startSession(signer, options = {}) {
+  if (isSandbox()) {
+    logger.info('KBA sandbox session started', { signer: `${signer.firstName} ${signer.lastName}`.trim() });
+    return sandboxStart();
+  }
   try {
     const params = new URLSearchParams({
       username: config.idology?.username || '',
@@ -83,6 +131,7 @@ async function startSession(signer, options = {}) {
  * @returns {object} { passed, correctCount, totalQuestions, details }
  */
 async function submitAnswers(sessionId, answers, minCorrect = 4) {
+  if (String(sessionId).startsWith('sbx_kba_')) return sandboxSubmit(answers, minCorrect);
   try {
     const params = new URLSearchParams({
       username: config.idology?.username || '',
@@ -175,4 +224,4 @@ function formatDob(dob) {
   return dob;
 }
 
-module.exports = { startSession, submitAnswers };
+module.exports = { startSession, submitAnswers, isSandbox };

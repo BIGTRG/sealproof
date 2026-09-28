@@ -1,12 +1,17 @@
 'use client';
 
+import * as api from '@/lib/api';
 import { useSessionWizard } from '@/lib/store';
 import { useTenantStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import { Clock, Zap, CheckCircle } from 'lucide-react';
 
 export function StepServiceLevel() {
-  const { data, setServiceLevel, nextStep, prevStep } = useSessionWizard();
+  const { data, setServiceLevel, nextStep, prevStep, sessionId } = useSessionWizard();
+  const handleContinue = async () => {
+    if (sessionId) await api.setServiceLevel(sessionId, data.serviceLevel);
+    nextStep();
+  };
   const { branding } = useTenantStore();
   const standardPrice = branding?.b2cStandardPriceCents ?? 2500;
   const rushPrice = branding?.b2cRushPriceCents ?? 4500;
@@ -85,7 +90,7 @@ export function StepServiceLevel() {
 
       <div className="flex items-center justify-between mt-8">
         <Button variant="ghost" onClick={prevStep}>Back</Button>
-        <Button variant="gold" onClick={nextStep}>Continue</Button>
+        <Button variant="gold" onClick={handleContinue}>Continue</Button>
       </div>
     </div>
   );

@@ -58,6 +58,9 @@ router.post('/sessions', async (req, res, next) => {
       priority: priority || 'standard',
       source: 'api',
       api_partner_id: req.partner.id,
+      tenant_id: req.partner.tenant_id || null,
+      state_of_act: req.body.state_of_act || 'NC',
+      description: req.body.description || null,
     });
 
     // Store callback URL for webhook delivery

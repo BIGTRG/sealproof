@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useSessionWizard } from '@/lib/store';
+import * as api from '@/lib/api';
+import type { Session } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { CheckCircle, Download, ArrowRight, Scale } from 'lucide-react';
@@ -11,7 +14,12 @@ import { CheckCircle, Download, ArrowRight, Scale } from 'lucide-react';
  * Session is done. Sealed document ready for download.
  */
 export function StepCompletion() {
-  const { data, reset } = useSessionWizard();
+  const { data, reset, sessionId } = useSessionWizard();
+  const [session, setSession] = useState<Session | null>(null);
+  useEffect(() => {
+    if (sessionId) api.getSession(sessionId).then((r) => r.data && setSession(r.data.session));
+  }, [sessionId]);
+  const sealedDocs = (session?.documents || []).filter((d) => d.status === 'sealed' || d.status === 'signed');
 
   return (
     <Card className="text-center py-16 max-w-lg mx-auto">
@@ -29,10 +37,19 @@ export function StepCompletion() {
       <div className="divider-gold my-8 max-w-xs mx-auto" />
 
       <div className="space-y-3 max-w-xs mx-auto">
-        <Button variant="gold" className="w-full">
-          <Download className="h-4 w-4" />
-          Download Sealed Document
-        </Button>
+        {sealedDocs.length > 0 ? sealedDocs.map((d) => (
+          <a key={d.id} href={api.documentDownloadUrl(sessionId!, d.id!, d.status === 'sealed' ? 'sealed' : 'signed')} target="_blank" rel="noreferrer" className="block">
+            <Button variant="gold" className="w-full">
+              <Download className="h-4 w-4" />
+              Download {sealedDocs.length > 1 ? d.fileName : 'Sealed Document'}
+            </Button>
+          </a>
+        )) : (
+          <Button variant="gold" className="w-full" disabled>
+            <Download className="h-4 w-4" />
+            Preparing sealed document...
+          </Button>
+        )}
         <Link href="/dashboard/documents" className="block">
           <Button variant="outline" className="w-full">
             View in Document Vault

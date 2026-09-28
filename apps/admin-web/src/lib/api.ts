@@ -22,14 +22,24 @@
  *   /api/kba/...        → kba-svc                  (port 4017)
  */
 
+let tenantId: string | null = null;
+export function setTenantId(id: string) { tenantId = id; }
+
 async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const res = await fetch(path, {
-    headers: { 'Content-Type': 'application/json', ...opts.headers },
     ...opts,
+    headers: { 'Content-Type': 'application/json', ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}), ...opts.headers },
   });
-  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const err = body.error;
+    throw new Error((typeof err === 'string' ? err : err?.message) || `API ${res.status}: ${res.statusText}`);
+  }
   return res.json();
 }
+
+export const resolveTenant = (domain: string) =>
+  request<{ tenant: any }>(`/api/tenant/api/resolve/domain/${encodeURIComponent(domain)}`);
 
 /* ─── Live Operations ─────────────────────────────────── */
 export const getActiveSessions = () => request('/api/sessions/sessions?status=in_progress');

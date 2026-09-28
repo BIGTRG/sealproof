@@ -9,6 +9,7 @@ const helmet = require('helmet');
 const { config, requestLogger, errorHandler, logger } = require('@sealproof/shared');
 
 const sessionRoutes = require('./routes/sessions');
+const workflowRoutes = require('./routes/workflow');
 const healthRoutes = require('./routes/health');
 
 const app = express();
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use(requestLogger);
 
 app.use('/health', healthRoutes);
+app.use('/sessions', workflowRoutes); // BFF workflow (intake, docs, kyc, kba, payment, notary actions)
 app.use('/sessions', sessionRoutes);
 
 app.use(errorHandler);

@@ -28,6 +28,17 @@ router.post('/',
     try {
       const session = await Session.create(req.body);
 
+      // Partner API passes signers inline; persist them so KYC/KBA/signing can run
+      if (Array.isArray(req.body.signers)) {
+        for (const [i, sg] of req.body.signers.entries()) {
+          if (!sg || !(sg.name || sg.full_legal_name)) continue;
+          await db.query(
+            `INSERT INTO session_signers (session_id, full_legal_name, email, phone, signer_role) VALUES ($1, $2, $3, $4, $5)`,
+            [session.id, sg.name || sg.full_legal_name, String(sg.email || '').toLowerCase(), sg.phone || null, i === 0 || sg.is_primary ? 'primary' : 'co-signer']
+          );
+        }
+      }
+
       await audit.emitAuditLog({
         eventType: 'session.created',
         actorType: req.body.api_partner_id ? 'api_partner' : 'customer',
@@ -105,10 +116,13 @@ router.get('/:id', async (req, res, next) => {
       return res.status(404).json({ error: { message: 'Session not found' } });
     }
 
-    // Enrich with documents and signers
-    const [docs, signers] = await Promise.all([
-      db.query('SELECT * FROM session_documents WHERE session_id = $1', [session.id]),
-      db.query('SELECT * FROM session_signers WHERE session_id = $1', [session.id]),
+    // Enrich with documents, signers and the assigned notary
+    const [docs, signers, notary] = await Promise.all([
+      db.query('SELECT * FROM session_documents WHERE session_id = $1 ORDER BY created_at', [session.id]),
+      db.query('SELECT * FROM session_signers WHERE session_id = $1 ORDER BY created_at', [session.id]),
+      session.notary_id
+        ? db.query('SELECT id, full_legal_name, display_name, state, commission_number, commission_expires_at FROM notaries WHERE id = $1', [session.notary_id])
+        : Promise.resolve({ rows: [] }),
     ]);
 
     res.json({
@@ -116,6 +130,8 @@ router.get('/:id', async (req, res, next) => {
         ...session,
         documents: docs.rows,
         signers: signers.rows,
+        notary: notary.rows[0] || null,
+        notary_name: notary.rows[0]?.display_name || notary.rows[0]?.full_legal_name || null,
       },
     });
   } catch (err) {
@@ -198,6 +214,7 @@ router.post('/:id/cancel', async (req, res, next) => {
     });
 
     logger.info('Session cancelled', { sessionId: session.id });
+    require('./workflow').dispatchWebhook('session.cancelled', session, { reason: req.body.reason || 'Cancelled by user' }).catch(() => undefined);
     res.json({ data: session });
   } catch (err) {
     next(err);

@@ -17,8 +17,24 @@ const client = axios.create({
   timeout: 15000,
 });
 
+/**
+ * Sandbox mode: PAYMENT_MODE=sandbox, or no TRG Pay API key configured.
+ * Simulates authorization/capture/refund/payout with clearly-labelled ids so the
+ * full session flow can run before the TRG Pay API is reachable in production.
+ */
+function isSandbox() {
+  if (process.env.PAYMENT_MODE === 'sandbox') return true;
+  if (process.env.PAYMENT_MODE === 'live') return false;
+  return !config.trgPay.apiKey;
+}
+const sbxId = (prefix) => `${prefix}_sbx_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
 /** Create an authorization hold on customer's payment method. */
 async function createAuthHold({ customerId, amountCents, sessionId, description }) {
+  if (isSandbox()) {
+    logger.info('TRG Pay sandbox authorization', { sessionId, amountCents });
+    return { authorizationId: sbxId('auth'), status: 'authorized', mode: 'sandbox', amountCents };
+  }
   try {
     const res = await client.post('/authorizations', {
       customer_id: customerId,
@@ -36,6 +52,9 @@ async function createAuthHold({ customerId, amountCents, sessionId, description 
 
 /** Capture a previously authorized payment. */
 async function capturePayment(authorizationId, { amountCents } = {}) {
+  if (isSandbox() || String(authorizationId).includes('_sbx_')) {
+    return { paymentId: sbxId('pay'), status: 'captured', amountCents, mode: 'sandbox' };
+  }
   try {
     const body = {};
     if (amountCents) body.amount_cents = amountCents;
@@ -49,6 +68,9 @@ async function capturePayment(authorizationId, { amountCents } = {}) {
 
 /** Issue a refund. */
 async function refund(paymentId, { amountCents, reason } = {}) {
+  if (isSandbox() || String(paymentId).includes('_sbx_')) {
+    return { refundId: sbxId('re'), status: 'refunded', mode: 'sandbox' };
+  }
   try {
     const res = await client.post(`/payments/${paymentId}/refund`, {
       amount_cents: amountCents,
@@ -63,6 +85,9 @@ async function refund(paymentId, { amountCents, reason } = {}) {
 
 /** Pay out a notary for a completed session. */
 async function payoutNotary({ notaryId, amountCents, sessionId }) {
+  if (isSandbox()) {
+    return { payoutId: sbxId('po'), status: 'paid', mode: 'sandbox' };
+  }
   try {
     const res = await client.post('/payouts', {
       recipient_id: notaryId,
@@ -95,4 +120,4 @@ async function createSubscription({ partnerId, planId, amountCents }) {
   }
 }
 
-module.exports = { createAuthHold, capturePayment, refund, payoutNotary, createSubscription };
+module.exports = { createAuthHold, capturePayment, refund, payoutNotary, createSubscription, isSandbox };

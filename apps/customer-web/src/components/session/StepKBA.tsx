@@ -22,6 +22,9 @@ export function StepKBA() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [canRetry, setCanRetry] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [kbaSessionId, setKbaSessionId] = useState<string | null>(null);
+  const [mode, setMode] = useState<string | null>(null);
+  const [scoreNote, setScoreNote] = useState('');
 
   const primarySigner = data.signers.find((s) => s.isPrimary) || data.signers[0];
 
@@ -33,9 +36,11 @@ export function StepKBA() {
   async function startKbaSession() {
     setState('loading');
     setAnswers({});
-    const res = await api.startKba(sessionId!, primarySigner?.id || 'primary');
+    const res = await api.startKba(sessionId!);
     if (res.data) {
       setQuestions(res.data.questions || []);
+      setKbaSessionId(res.data.kba_session_id);
+      setMode(res.data.mode || null);
       setState('questions');
     } else {
       setErrorMsg(res.error || 'Could not start identity verification.');
@@ -46,12 +51,14 @@ export function StepKBA() {
   async function handleSubmit() {
     if (!sessionId) return;
     setState('submitting');
-    const res = await api.submitKbaAnswers(sessionId, answers);
+    const res = await api.submitKbaAnswers(sessionId, kbaSessionId!, answers);
     if (res.data) {
-      if (res.data.result === 'pass') {
+      const d: any = res.data;
+      if (d.status === 'passed' || d.passed === true) {
         setState('passed');
       } else {
-        setCanRetry(res.data.can_retry);
+        setCanRetry(d.can_retry !== false);
+        setScoreNote(d.questions_correct !== undefined ? `${d.questions_correct} of ${d.questions_required ?? questions.length} correct.` : '');
         setState('failed');
       }
     } else {
@@ -108,7 +115,7 @@ export function StepKBA() {
         </div>
         <h2 className="font-display text-xl font-semibold text-navy-700">Incorrect Answers</h2>
         <p className="text-sm text-gray-500 mt-2 max-w-sm mx-auto">
-          Some answers were incorrect. You have one more attempt to verify your identity.
+          Some answers were incorrect. {scoreNote} You have one more attempt to verify your identity.
         </p>
         <div className="mt-8">
           <Button variant="gold" onClick={startKbaSession}>Try Again</Button>
@@ -155,6 +162,11 @@ export function StepKBA() {
           Answer these questions to verify your identity. These are generated from
           public records and are required by state notarization law.
         </p>
+        {mode === 'sandbox' && (
+          <div className="mt-4 mx-auto max-w-md rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+            Sandbox questions: the identity-records provider is not connected on this environment yet. In production these questions come from credit and public records. For this test the first answer listed is correct.
+          </div>
+        )}
       </div>
 
       <div className="space-y-6">

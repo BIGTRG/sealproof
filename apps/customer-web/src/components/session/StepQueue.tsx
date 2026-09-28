@@ -13,23 +13,37 @@ import { Clock, Users, Loader2 } from 'lucide-react';
 export function StepQueue() {
   const { sessionId, nextStep, data } = useSessionWizard();
   const [status, setStatus] = useState('queued');
-  const [position, setPosition] = useState<number | null>(null);
+  const [notaryName, setNotaryName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sessionId) return;
+    let ticks = 0;
 
-    const interval = setInterval(async () => {
+    const tick = async () => {
       const res = await api.getSession(sessionId);
-      if (res.data?.session) {
-        const s = res.data.session.status;
-        setStatus(s);
-        if (s === 'in_progress' || s === 'signing') {
+      const s = res.data?.session?.status;
+      if (!s) return;
+      setStatus(s);
+      if (s === 'matched_to_notary' || s === 'in_session' || s === 'completed') {
+        // Notary assigned: move the signer into the live session room to wait for the notary
+        clearInterval(interval);
+        nextStep();
+        return;
+      }
+      if (s === 'queued' && ticks % 2 === 0) {
+        const m = await api.matchNow(sessionId);
+        if (m.data?.matched) {
+          setNotaryName(m.data.notary?.name || null);
+          setStatus('matched_to_notary');
           clearInterval(interval);
-          nextStep();
+          setTimeout(nextStep, 1200);
         }
       }
-    }, 3000);
+      ticks++;
+    };
 
+    tick();
+    const interval = setInterval(tick, 3000);
     return () => clearInterval(interval);
   }, [sessionId, nextStep]);
 
@@ -39,11 +53,11 @@ export function StepQueue() {
         <Loader2 className="h-7 w-7 text-gold-500 animate-spin" />
       </div>
       <h2 className="font-display text-xl font-semibold text-navy-700">
-        {status === 'matched' ? 'Notary Found' : 'Finding Your Notary'}
+        {status === 'matched_to_notary' ? 'Notary Found' : 'Finding Your Notary'}
       </h2>
       <p className="text-sm text-gray-500 mt-2 max-w-sm mx-auto">
-        {status === 'matched'
-          ? 'A notary has been assigned. Your session will begin momentarily.'
+        {status === 'matched_to_notary'
+          ? `${notaryName ? notaryName + ' has' : 'A commissioned notary has'} been assigned. Your session will begin momentarily.`
           : data.serviceLevel === 'rush'
             ? 'You are in the priority queue. Matching with the first available notary.'
             : 'Matching you with the next available commissioned notary. Please stay on this page.'

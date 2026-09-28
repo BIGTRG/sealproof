@@ -234,6 +234,30 @@ module.exports = {
     // Frontend Apps (3 Next.js apps)
     // =========================================================================
     {
+      name: 'sp-state-compliance',
+      script: 'services/state-compliance-svc/src/index.js',
+      instances: 1,
+      exec_mode: 'fork',
+      env: { NODE_ENV: 'production', STATE_COMPLIANCE_SVC_PORT: 4016 },
+      max_memory_restart: '256M',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      error_file: '/var/log/sealproof/state-compliance-error.log',
+      out_file: '/var/log/sealproof/state-compliance-out.log',
+      merge_logs: true,
+    },
+    {
+      name: 'sp-kba',
+      script: 'services/kba-svc/src/index.js',
+      instances: 1,
+      exec_mode: 'fork',
+      env: { NODE_ENV: 'production', KBA_SVC_PORT: 4017 },
+      max_memory_restart: '256M',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      error_file: '/var/log/sealproof/kba-error.log',
+      out_file: '/var/log/sealproof/kba-out.log',
+      merge_logs: true,
+    },
+    {
       name: 'sp-customer-web',
       script: 'node_modules/.bin/next',
       args: 'start',

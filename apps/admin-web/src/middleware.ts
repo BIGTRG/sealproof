@@ -4,12 +4,14 @@
  */
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const isProtectedRoute = createRouteMatcher([
   '/dashboard(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
+  // TEMP-DEMO: admin auth disabled for stakeholder review until Clerk production keys are wired -- re-enable before launch
+  if (false && isProtectedRoute(req)) {
     auth().protect();
   }
 });

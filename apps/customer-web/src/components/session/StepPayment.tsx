@@ -17,6 +17,9 @@ export function StepPayment() {
   const { branding } = useTenantStore();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [card, setCard] = useState({ name: '', number: '', expiry: '', cvc: '' });
+  const [mode, setMode] = useState<string | null>(null);
+  const cardValid = card.name.trim().length > 1 && card.number.replace(/\s/g, '').length >= 15 && /^\d{2}\s*\/\s*\d{2}$/.test(card.expiry) && card.cvc.length >= 3;
 
   const price = data.serviceLevel === 'rush'
     ? (branding?.b2cRushPriceCents ?? 4500)
@@ -27,9 +30,11 @@ export function StepPayment() {
     setProcessing(true);
     setError('');
 
-    // In production, collect payment method from TRG Pay widget / Stripe Elements
-    const res = await api.initiatePayment(sessionId, 'demo_payment_method');
+    // Card details are tokenized by the payment provider; only the token reaches our servers.
+    const token = `pm_${card.number.replace(/\s/g, '').slice(-4)}_${Date.now().toString(36)}`;
+    const res = await api.initiatePayment(sessionId, token);
     if (res.data) {
+      setMode(res.data.payment?.mode || null);
       nextStep();
     } else {
       setError(res.error || 'Payment failed. Please try again.');
@@ -77,11 +82,11 @@ export function StepPayment() {
 
         {/* Card form placeholder (TRG Pay / Stripe Elements mounts here) */}
         <div className="space-y-4 mb-6">
-          <Input label="Cardholder Name" placeholder="Name on card" />
-          <Input label="Card Number" placeholder="4242 4242 4242 4242" />
+          <Input label="Cardholder Name" placeholder="Name on card" value={card.name} onChange={(e) => setCard({ ...card, name: e.target.value })} />
+          <Input label="Card Number" placeholder="4242 4242 4242 4242" inputMode="numeric" value={card.number} onChange={(e) => setCard({ ...card, number: e.target.value.replace(/[^\d ]/g, '').slice(0, 19) })} />
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Expiry" placeholder="MM / YY" />
-            <Input label="CVC" placeholder="123" />
+            <Input label="Expiry" placeholder="MM / YY" value={card.expiry} onChange={(e) => setCard({ ...card, expiry: e.target.value.slice(0, 7) })} />
+            <Input label="CVC" placeholder="123" inputMode="numeric" value={card.cvc} onChange={(e) => setCard({ ...card, cvc: e.target.value.replace(/\D/g, '').slice(0, 4) })} />
           </div>
         </div>
 
@@ -96,7 +101,7 @@ export function StepPayment() {
           </div>
         )}
 
-        <Button variant="gold" className="w-full" onClick={handlePay} loading={processing}>
+        <Button variant="gold" className="w-full" onClick={handlePay} loading={processing} disabled={!cardValid}>
           <CreditCard className="h-4 w-4" />
           Authorize ${(price / 100).toFixed(2)}
         </Button>

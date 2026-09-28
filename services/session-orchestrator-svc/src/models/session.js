@@ -58,8 +58,8 @@ async function create(data) {
     `INSERT INTO notarization_sessions
       (customer_id, api_partner_id, document_type, document_count,
        signer_count, state_of_act, ron_session_type,
-       customer_paid_cents)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       customer_paid_cents, tenant_id, description)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING *`,
     [
       data.customer_id,
@@ -67,9 +67,11 @@ async function create(data) {
       data.document_type,
       data.document_count || 1,
       data.signer_count || 1,
-      data.state_of_act || 'NC',
-      data.ron_session_type || 'standard',
+      (data.state_of_act || 'NC').toUpperCase(),
+      data.ron_session_type || (data.priority === 'rush' ? 'rush' : 'standard'),
       data.customer_paid_cents || null,
+      data.tenant_id || null,
+      data.description || null,
     ]
   );
   return result.rows[0];

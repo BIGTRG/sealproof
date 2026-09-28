@@ -38,14 +38,11 @@ export type SessionStatus =
   | 'created'
   | 'kyc_pending'
   | 'kyc_complete'
-  | 'payment_pending'
   | 'queued'
-  | 'matched'
-  | 'in_progress'
-  | 'signing'
-  | 'sealing'
+  | 'matched_to_notary'
+  | 'in_session'
   | 'completed'
-  | 'cancelled'
+  | 'rejected'
   | 'failed';
 
 export interface Signer {
@@ -55,6 +52,7 @@ export interface Signer {
   phone: string;
   isPrimary: boolean;
   kycStatus: 'pending' | 'verified' | 'failed';
+  signedAt?: string | null;
 }
 
 export interface SessionDocument {
@@ -67,6 +65,9 @@ export interface SessionDocument {
   description: string;
   uploadProgress: number;
   uploadedUrl?: string;
+  status?: 'uploaded' | 'signed' | 'sealed' | string;
+  sealedUrl?: string;
+  signedUrl?: string;
 }
 
 export interface Session {
@@ -93,6 +94,7 @@ export interface Session {
 export interface NewSessionData {
   documentType: DocumentType;
   description: string;
+  stateOfAct: string;
   signerCount: number;
   signers: Signer[];
   documents: SessionDocument[];
@@ -110,6 +112,7 @@ export interface VaultDocument {
   sealedUrl: string;
   pageCount: number;
   signerNames: string[];
+  status?: string;
 }
 
 // ─── User ───────────────────────────────────────────────────────────────────

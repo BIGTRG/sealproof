@@ -3,13 +3,22 @@ import type { NotaryProfile, QueuedSession, ActiveSession, Shift, ShiftStatus } 
 
 /* ─── Tenant Branding Store ──────────────────────────────── */
 
-interface TenantBranding {
+export interface TenantBranding {
+  id?: string;
+  slug?: string;
   companyName: string;
-  logoUrl?: string;
+  domain?: string;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
   primaryColor: string;
   secondaryColor: string;
-  legalEntity: string;
-  notaryPayoutCents: number;
+  accentColor?: string;
+  supportEmail?: string | null;
+  supportPhone?: string | null;
+  legalEntity: string | null;
+  termsUrl?: string | null;
+  privacyUrl?: string | null;
+  notaryPayoutCents?: number;
 }
 
 interface TenantState {
@@ -19,9 +28,11 @@ interface TenantState {
 
 export const useTenantStore = create<TenantState>((set) => ({
   branding: {
+    slug: 'sealproof',
     companyName: 'SealProof',
-    primaryColor: '#1a1a2e',
-    secondaryColor: '#4c6ef5',
+    primaryColor: '#0F1B2D',
+    secondaryColor: '#1A2332',
+    accentColor: '#C5A05E',
     legalEntity: 'SealProof LLC',
     notaryPayoutCents: 1000,
   },

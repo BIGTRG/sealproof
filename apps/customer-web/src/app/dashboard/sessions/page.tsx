@@ -12,15 +12,14 @@ import { FileText, Plus, Search, Filter, ArrowUpDown } from 'lucide-react';
 function statusBadge(status: string) {
   const map: Record<string, { variant: 'success' | 'warning' | 'gold' | 'danger' | 'default'; label: string }> = {
     completed:       { variant: 'success', label: 'Completed' },
-    in_progress:     { variant: 'gold',    label: 'In Progress' },
-    queued:          { variant: 'warning', label: 'Queued' },
-    matched:         { variant: 'gold',    label: 'Matched' },
-    kyc_pending:     { variant: 'warning', label: 'ID Verification' },
-    kyc_complete:    { variant: 'success', label: 'ID Verified' },
-    payment_pending: { variant: 'warning', label: 'Payment' },
-    signing:         { variant: 'gold',    label: 'Signing' },
-    sealing:         { variant: 'gold',    label: 'Sealing' },
-    cancelled:       { variant: 'danger',  label: 'Cancelled' },
+    in_session:        { variant: 'gold',    label: 'In Session' },
+    queued:            { variant: 'warning', label: 'Queued' },
+    matched_to_notary: { variant: 'gold',    label: 'Notary Assigned' },
+    created:           { variant: 'default', label: 'Draft' },
+    kyc_pending:       { variant: 'warning', label: 'ID Verification' },
+    kyc_complete:      { variant: 'warning', label: 'Awaiting Payment' },
+    rejected:          { variant: 'danger',  label: 'Cancelled' },
+    cancelled:         { variant: 'danger',  label: 'Cancelled' },
     failed:          { variant: 'danger',  label: 'Failed' },
   };
   const s = map[status] || { variant: 'default' as const, label: status };
@@ -40,9 +39,9 @@ export default function SessionsPage() {
   }, []);
 
   const filtered = sessions.filter((s) => {
-    if (filter === 'active') return !['completed', 'cancelled', 'failed'].includes(s.status);
+    if (filter === 'active') return !['completed', 'rejected', 'cancelled', 'failed'].includes(s.status);
     if (filter === 'completed') return s.status === 'completed';
-    if (filter === 'cancelled') return ['cancelled', 'failed'].includes(s.status);
+    if (filter === 'cancelled') return ['rejected', 'cancelled', 'failed'].includes(s.status);
     return true;
   });
 

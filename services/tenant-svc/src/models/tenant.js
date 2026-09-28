@@ -2,7 +2,8 @@
  * Tenant data-access layer
  * Handles CRUD and caching for tenant records
  */
-const { pool, redis } = require('@sealproof/shared');
+const { pool, redis: redisModule } = require('@sealproof/shared');
+const { redis } = redisModule; // shared exports { redis, connectRedis }
 
 const CACHE_TTL = 300; // 5 minutes
 const CACHE_PREFIX = 'tenant:';
@@ -71,6 +72,7 @@ async function resolveById(id) {
 function toBrandingPayload(tenant) {
   if (!tenant) return null;
   return {
+    id:              tenant.id,
     slug:            tenant.slug,
     companyName:     tenant.company_name,
     domain:          tenant.domain,
@@ -179,13 +181,18 @@ async function update(id, data) {
  * List all tenants (admin use)
  */
 async function list({ status, limit = 50, offset = 0 } = {}) {
-  let query = 'SELECT * FROM tenants';
+  let query = `SELECT t.*,
+      (SELECT COUNT(*) FROM notarization_sessions s WHERE s.tenant_id = t.id AND s.created_at >= date_trunc('month', NOW()))::int AS sessions_mtd,
+      (SELECT COUNT(*) FROM notarization_sessions s WHERE s.tenant_id = t.id AND s.status = 'completed')::int AS sessions_completed,
+      (SELECT COUNT(*) FROM notaries n WHERE n.tenant_id = t.id OR (t.slug = 'sealproof' AND n.tenant_id IS NULL))::int AS notary_count,
+      (SELECT COUNT(*) FROM api_partners p WHERE p.tenant_id = t.id)::int AS partner_count
+    FROM tenants t`;
   const params = [];
   if (status) {
-    query += ' WHERE status = $1';
+    query += ' WHERE t.status = $1';
     params.push(status);
   }
-  query += ` ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+  query += ` ORDER BY t.created_at ASC LIMIT ${limit} OFFSET ${offset}`;
   const { rows } = await pool.query(query, params);
   return rows;
 }

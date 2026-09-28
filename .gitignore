@@ -7,3 +7,8 @@ coverage/
 *.log
 .DS_Store
 tmp/
+
+# build output
+apps/*/.next/
+*.bak-*
+node_modules/

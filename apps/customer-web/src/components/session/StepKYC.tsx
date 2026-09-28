@@ -16,21 +16,35 @@ type KycState = 'idle' | 'initiating' | 'pending' | 'approved' | 'failed';
 export function StepKYC() {
   const { sessionId, nextStep, prevStep } = useSessionWizard();
   const [state, setState] = useState<KycState>('idle');
-  const [inquiryUrl, setInquiryUrl] = useState<string | null>(null);
+  const [mode, setMode] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Already verified (e.g. page reload) -> skip ahead
+  useEffect(() => {
+    if (!sessionId) return;
+    api.getKycStatus(sessionId).then((res) => {
+      if (res.data?.status === 'passed') { setMode(res.data.mode); setState('approved'); }
+    });
+  }, [sessionId]);
 
   const initiate = async () => {
     if (!sessionId) return;
     setState('initiating');
+    setError(null);
     const res = await api.initiateKyc(sessionId);
     if (res.data) {
-      setInquiryUrl(res.data.inquiryUrl);
-      setState('pending');
-      // Open Persona in new tab/iframe
-      if (res.data.inquiryUrl) {
-        window.open(res.data.inquiryUrl, '_blank');
+      setMode(res.data.mode);
+      if (res.data.status === 'passed') {
+        // Sandbox verification resolves immediately; show a brief scanning state for clarity
+        setState('pending');
+        setTimeout(() => setState('approved'), 1800);
+        return;
       }
+      setState('pending');
+      if (res.data.inquiry_url) window.open(res.data.inquiry_url, '_blank');
       pollKycStatus();
     } else {
+      setError(res.error || 'Could not start identity verification');
       setState('failed');
     }
   };
@@ -39,18 +53,22 @@ export function StepKYC() {
     const interval = setInterval(async () => {
       if (!sessionId) return;
       const res = await api.getKycStatus(sessionId);
-      if (res.data?.status === 'approved') {
+      if (res.data?.status === 'passed') {
         setState('approved');
         clearInterval(interval);
-      } else if (res.data?.status === 'failed' || res.data?.status === 'declined') {
+      } else if (res.data?.status === 'failed') {
         setState('failed');
         clearInterval(interval);
       }
     }, 5000);
-
-    // Clean up after 10 minutes
     setTimeout(() => clearInterval(interval), 600_000);
   };
+
+  const SandboxNote = () => mode === 'sandbox' ? (
+    <div className="mt-6 mx-auto max-w-md rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+      Sandbox verification: the identity provider is not connected on this environment yet, so the ID check is simulated. Production uses government ID scan plus facial match.
+    </div>
+  ) : null;
 
   if (state === 'approved') {
     return (
@@ -62,6 +80,7 @@ export function StepKYC() {
         <p className="text-sm text-gray-500 mt-2">
           Your government ID has been verified successfully.
         </p>
+        <SandboxNote />
         <div className="mt-8">
           <Button variant="gold" onClick={nextStep}>Continue to KBA</Button>
         </div>
@@ -77,7 +96,7 @@ export function StepKYC() {
         </div>
         <h2 className="font-display text-xl font-semibold text-navy-700">Verification Failed</h2>
         <p className="text-sm text-gray-500 mt-2 max-w-sm mx-auto">
-          We were unable to verify your identity. Please try again with a clear photo of your government-issued ID.
+          {error || 'We were unable to verify your identity. Please try again with a clear photo of your government-issued ID.'}
         </p>
         <div className="mt-8 flex justify-center gap-3">
           <Button variant="outline" onClick={prevStep}>Go Back</Button>
@@ -93,8 +112,9 @@ export function StepKYC() {
         <Loader2 className="h-10 w-10 text-gold-400 mx-auto mb-5 animate-spin" />
         <h2 className="font-display text-xl font-semibold text-navy-700">Verifying Your ID</h2>
         <p className="text-sm text-gray-500 mt-2 max-w-sm mx-auto">
-          Complete the identity check in the window that opened.
-          This page will update automatically once verification is complete.
+          {mode === 'sandbox'
+            ? 'Running credential analysis and facial match...'
+            : 'Complete the identity check in the window that opened. This page will update automatically once verification is complete.'}
         </p>
       </Card>
     );

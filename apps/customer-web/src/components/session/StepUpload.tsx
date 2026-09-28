@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { useSessionWizard } from '@/lib/store';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -9,33 +9,42 @@ import * as api from '@/lib/api';
 import { Upload, FileText, X, CheckCircle } from 'lucide-react';
 
 export function StepUpload() {
-  const { data, addDocument, removeDocument, updateDocumentProgress, sessionId, nextStep, prevStep } = useSessionWizard();
+  const { data, addDocument, removeDocument, updateDocumentProgress, updateDocument, sessionId, nextStep, prevStep } = useSessionWizard();
+  const [error, setError] = useState<string | null>(null);
 
   const handleFiles = useCallback((files: FileList) => {
-    Array.from(files).forEach((file) => {
-      if (file.type !== 'application/pdf') return;
+    if (!sessionId) { setError('Session not started yet. Go back one step and continue again.'); return; }
+    setError(null);
+    Array.from(files).forEach((file, offset) => {
+      if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) { setError(`${file.name}: only PDF files are accepted.`); return; }
+      if (file.size > 25 * 1024 * 1024) { setError(`${file.name}: larger than 25 MB.`); return; }
 
-      const doc = {
+      const idx = useSessionWizard.getState().data.documents.length;
+      addDocument({
         file,
         fileName: file.name,
         fileSize: file.size,
         pageCount: 0,
         documentType: data.documentType,
         description: '',
-        uploadProgress: 0,
-      };
+        uploadProgress: 1,
+      });
 
-      addDocument(doc);
-
-      // Upload to backend if session exists
-      if (sessionId) {
-        const idx = data.documents.length;
-        api.uploadDocument(sessionId, file, data.documentType, (pct) => {
-          updateDocumentProgress(idx, pct);
-        });
-      }
+      api.uploadDocument(sessionId, file, data.documentType, (pct) => {
+        updateDocumentProgress(idx, Math.max(1, Math.min(pct, 99)));
+      }).then((res) => {
+        if (res.error || !res.data) {
+          setError(`${file.name}: ${res.error || 'upload failed'}`);
+          removeDocument(idx);
+          return;
+        }
+        updateDocument(idx, { id: res.data.document.id, pageCount: res.data.document.pageCount, uploadProgress: 100, uploadedUrl: res.data.document.uploadUrl });
+      });
     });
-  }, [data.documentType, data.documents.length, sessionId, addDocument, updateDocumentProgress]);
+  }, [data.documentType, sessionId, addDocument, removeDocument, updateDocument, updateDocumentProgress]);
+
+  const allUploaded = data.documents.length > 0 && data.documents.every((d) => d.uploadProgress >= 100);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -58,18 +67,16 @@ export function StepUpload() {
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
         className="border-2 border-dashed border-gray-200 rounded-legal p-10 text-center hover:border-gold-300 transition-colors cursor-pointer"
-        onClick={() => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = '.pdf';
-          input.multiple = true;
-          input.onchange = (e) => {
-            const files = (e.target as HTMLInputElement).files;
-            if (files) handleFiles(files);
-          };
-          input.click();
-        }}
+        onClick={() => fileInput.current?.click()}
       >
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".pdf,application/pdf"
+          multiple
+          className="hidden"
+          onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ''; }}
+        />
         <Upload className="h-8 w-8 text-brand-200 mx-auto mb-3" />
         <p className="text-sm font-medium text-navy-700">
           Drag and drop PDFs here, or click to browse
@@ -108,9 +115,13 @@ export function StepUpload() {
         </div>
       )}
 
+      {error && (
+        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+
       <div className="flex items-center justify-between mt-8">
         <Button variant="ghost" onClick={prevStep}>Back</Button>
-        <Button variant="gold" onClick={nextStep} disabled={data.documents.length === 0}>
+        <Button variant="gold" onClick={nextStep} disabled={!allUploaded}>
           Continue
         </Button>
       </div>

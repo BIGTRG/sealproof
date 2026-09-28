@@ -40,11 +40,15 @@ interface SessionWizardState {
   prevStep: () => void;
   setDocumentType: (type: DocumentType) => void;
   setDescription: (desc: string) => void;
+  setStateOfAct: (state: string) => void;
+  customerId: string | null;
+  setCustomerId: (id: string) => void;
   setSignerCount: (count: number) => void;
   updateSigner: (index: number, signer: Partial<Signer>) => void;
   addDocument: (doc: SessionDocument) => void;
   removeDocument: (index: number) => void;
   updateDocumentProgress: (index: number, progress: number) => void;
+  updateDocument: (index: number, patch: Partial<SessionDocument>) => void;
   setServiceLevel: (level: ServiceLevel) => void;
   setSessionId: (id: string) => void;
   reset: () => void;
@@ -53,6 +57,7 @@ interface SessionWizardState {
 const emptyData: NewSessionData = {
   documentType: 'other',
   description: '',
+  stateOfAct: 'NC',
   signerCount: 1,
   signers: [{ name: '', email: '', phone: '', isPrimary: true, kycStatus: 'pending' }],
   documents: [],
@@ -73,6 +78,12 @@ export const useSessionWizard = create<SessionWizardState>((set) => ({
 
   setDescription: (description) =>
     set((s) => ({ data: { ...s.data, description } })),
+
+  setStateOfAct: (stateOfAct) =>
+    set((s) => ({ data: { ...s.data, stateOfAct } })),
+
+  customerId: null,
+  setCustomerId: (customerId) => set({ customerId }),
 
   setSignerCount: (signerCount) =>
     set((s) => {
@@ -102,6 +113,13 @@ export const useSessionWizard = create<SessionWizardState>((set) => ({
     set((s) => {
       const documents = [...s.data.documents];
       documents[index] = { ...documents[index], uploadProgress: progress };
+      return { data: { ...s.data, documents } };
+    }),
+
+  updateDocument: (index, patch) =>
+    set((s) => {
+      const documents = [...s.data.documents];
+      documents[index] = { ...documents[index], ...patch };
       return { data: { ...s.data, documents } };
     }),
 

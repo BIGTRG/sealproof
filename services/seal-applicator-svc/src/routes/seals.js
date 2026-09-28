@@ -110,7 +110,7 @@ router.post('/:sessionId/apply', async (req, res, next) => {
 
     // Get signers
     const signers = await db.query(
-      'SELECT signer_name FROM session_signers WHERE session_id = $1', [sessionId]
+      'SELECT full_legal_name AS signer_name FROM session_signers WHERE session_id = $1', [sessionId]
     );
     const signerNames = signers.rows.map((s) => s.signer_name).join(', ');
 
@@ -139,7 +139,7 @@ router.post('/:sessionId/apply', async (req, res, next) => {
         commissionNumber,
         commissionExpiry,
         notarizationDate: sess.session_started_at || new Date().toISOString(),
-        actType: doc.document_type || 'acknowledgment',
+        actType: req.body?.act_type || 'acknowledgment',
         signerName: signerNames,
         sessionId,
         stateCode,

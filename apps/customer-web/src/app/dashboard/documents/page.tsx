@@ -20,7 +20,7 @@ export default function DocumentsPage() {
   }, []);
 
   const handleDownload = async (doc: VaultDocument) => {
-    const url = await api.downloadDocument(doc.id);
+    const url = await api.downloadDocument(doc.id, doc.sessionId);
     if (url) window.open(url, '_blank');
   };
 

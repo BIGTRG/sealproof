@@ -45,3 +45,30 @@ export const useNavStore = create<NavState>((set) => ({
   sidebarCollapsed: false,
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
 }));
+
+
+/* ─── Tenant Branding Store (white-label) ─────────────────── */
+
+export interface TenantBranding {
+  id?: string;
+  slug?: string;
+  companyName: string;
+  domain?: string;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor?: string;
+  supportEmail?: string | null;
+  legalEntity: string | null;
+}
+
+interface TenantState {
+  branding: TenantBranding | null;
+  setBranding: (b: TenantBranding) => void;
+}
+
+export const useTenantStore = create<TenantState>((set) => ({
+  branding: { slug: 'sealproof', companyName: 'SealProof', primaryColor: '#0F1B2D', secondaryColor: '#1A2332', accentColor: '#C5A05E', legalEntity: 'SealProof LLC' },
+  setBranding: (branding) => set({ branding }),
+}));

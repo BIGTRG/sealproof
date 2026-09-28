@@ -37,17 +37,19 @@ router.post('/sessions',
         });
       }
 
+      const provider = persona.isSandbox() ? 'sandbox' : 'persona';
+
       // If session is still 'created', transition to kyc_pending
       if (session.rows[0].status === 'created') {
         await db.query(
           `UPDATE notarization_sessions
-           SET status = 'kyc_pending', kyc_started_at = NOW(), kyc_provider = 'persona', updated_at = NOW()
+           SET status = 'kyc_pending', kyc_started_at = NOW(), kyc_provider = $2, updated_at = NOW()
            WHERE id = $1`,
-          [session_id]
+          [session_id, provider]
         );
       }
 
-      // Create Persona inquiry
+      // Create Persona inquiry (or a sandbox inquiry when Persona is not configured)
       const inquiry = await persona.createInquiry({
         signerId: signer_id,
         sessionId: session_id,
@@ -59,9 +61,25 @@ router.post('/sessions',
       await KycSession.createKycRecord({
         sessionId: session_id,
         signerId: signer_id,
-        provider: 'persona',
+        provider,
         inquiryId: inquiry.inquiryId,
       });
+
+      // Sandbox: resolve immediately and advance the session when every signer has passed
+      let sandboxStatus = null;
+      if (provider === 'sandbox') {
+        await KycSession.updateKycResult({ signerId: signer_id, inquiryId: inquiry.inquiryId, result: 'passed' });
+        const signerStatus = await KycSession.allSignersPassed(session_id);
+        if (signerStatus.allPassed) {
+          await db.query(
+            `UPDATE notarization_sessions
+             SET status = 'kyc_complete', kyc_completed_at = NOW(), kyc_result = 'passed', updated_at = NOW()
+             WHERE id = $1 AND status = 'kyc_pending'`,
+            [session_id]
+          );
+        }
+        sandboxStatus = 'passed';
+      }
 
       await audit.emitAuditLog({
         eventType: 'kyc.started',
@@ -70,7 +88,7 @@ router.post('/sessions',
         sessionId: session_id,
         payload: {
           signer_id,
-          provider: 'persona',
+          provider,
           inquiry_id: inquiry.inquiryId,
         },
         ipAddress: req.ip,
@@ -83,7 +101,8 @@ router.post('/sessions',
         data: {
           inquiry_id: inquiry.inquiryId,
           session_url: inquiry.sessionUrl,
-          status: 'pending',
+          status: sandboxStatus || 'pending',
+          mode: provider,
         },
       });
     } catch (err) {
@@ -98,7 +117,7 @@ router.post('/sessions',
 router.get('/sessions/:signerId', async (req, res, next) => {
   try {
     const result = await db.query(
-      'SELECT id, session_id, signer_name, kyc_session_id, kyc_result FROM session_signers WHERE id = $1',
+      'SELECT id, session_id, full_legal_name AS signer_name, kyc_session_id, kyc_result FROM session_signers WHERE id = $1',
       [req.params.signerId]
     );
     if (!result.rows[0]) {

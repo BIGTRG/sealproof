@@ -35,9 +35,11 @@ export async function proxyRequest(
   const baseUrl = getServiceUrl(service);
   const url = `${baseUrl}${path}`;
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = {};
+
+  // Preserve the caller's content type (JSON, multipart uploads, ...)
+  const contentType = request.headers.get('Content-Type');
+  if (contentType) headers['Content-Type'] = contentType;
 
   // Forward auth and tenant headers
   const authHeader = request.headers.get('Authorization');
@@ -49,23 +51,35 @@ export async function proxyRequest(
   const requestId = request.headers.get('X-Request-ID');
   if (requestId) headers['X-Request-ID'] = requestId;
 
+  const forwardedFor = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
+  if (forwardedFor) headers['X-Forwarded-For'] = forwardedFor;
+  const ua = request.headers.get('user-agent');
+  if (ua) headers['User-Agent'] = ua;
+
   try {
+    // Binary-safe body passthrough (multipart uploads must not be re-encoded as text)
     const body = ['GET', 'HEAD'].includes(request.method)
       ? undefined
-      : await request.text();
+      : Buffer.from(await request.arrayBuffer());
 
     const res = await fetch(url, {
       method: request.method,
       headers,
       body,
+      // @ts-ignore - Node fetch needs duplex for streamed bodies
+      duplex: 'half',
     });
 
-    const data = await res.text();
+    const outHeaders: Record<string, string> = {
+      'Content-Type': res.headers.get('Content-Type') || 'application/json',
+    };
+    const disposition = res.headers.get('Content-Disposition');
+    if (disposition) outHeaders['Content-Disposition'] = disposition;
+    const length = res.headers.get('Content-Length');
+    if (length) outHeaders['Content-Length'] = length;
 
-    return new Response(data, {
-      status: res.status,
-      headers: { 'Content-Type': res.headers.get('Content-Type') || 'application/json' },
-    });
+    // Stream the upstream response (PDF downloads, large JSON) without buffering to text
+    return new Response(res.body, { status: res.status, headers: outHeaders });
   } catch (err: any) {
     return new Response(
       JSON.stringify({ error: 'Service unavailable', detail: err.message }),

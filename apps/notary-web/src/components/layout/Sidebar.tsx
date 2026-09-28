@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTenantStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import {
   Scale,
@@ -23,16 +24,30 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { branding } = useTenantStore();
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-navy-700 text-white">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 px-6 border-b border-navy-500">
-        <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 object-contain drop-shadow-[0_0_6px_rgba(197,160,94,0.45)]" />
-        <div>
-          <span className="text-xl font-script text-white">Seal<span className="text-brand-300">Proof</span></span>
-          <span className="block text-[10px] text-gold-300 font-medium tracking-wide uppercase">Notary Portal</span>
-        </div>
+        {branding && branding.slug && branding.slug !== 'sealproof' ? (
+          <div>
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl.replace(/\.png$/, '-white.png')} alt={branding.companyName} className="h-9 w-auto object-contain" onError={(e) => { (e.currentTarget as HTMLImageElement).src = branding.logoUrl as string; }} />
+            ) : (
+              <span className="text-xl font-script text-white">{branding.companyName}</span>
+            )}
+            <span className="block text-[10px] text-gold-300 font-medium tracking-wide uppercase">Notary Portal</span>
+          </div>
+        ) : (
+          <>
+            <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 object-contain drop-shadow-[0_0_6px_rgba(197,160,94,0.45)]" />
+            <div>
+              <span className="text-xl font-script text-white">Seal<span className="text-brand-300">Proof</span></span>
+              <span className="block text-[10px] text-gold-300 font-medium tracking-wide uppercase">Notary Portal</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Navigation */}

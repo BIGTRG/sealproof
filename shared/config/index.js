@@ -95,6 +95,13 @@ const config = {
   },
 
   // TRG Pay
+  // IDology KBA (ExpectID IQ)
+  idology: {
+    baseUrl: process.env.IDOLOGY_BASE_URL || 'https://web.idologylive.com/api',
+    username: process.env.IDOLOGY_USERNAME || '',
+    password: process.env.IDOLOGY_PASSWORD || '',
+  },
+
   trgPay: {
     baseUrl: process.env.TRG_PAY_BASE_URL || 'https://api.trgpay.com/v1',
     apiKey: process.env.TRG_PAY_API_KEY || '',

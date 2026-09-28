@@ -14,21 +14,29 @@ const JOURNAL = `${PROXY}/journal`;
 const SEAL = `${PROXY}/seal`;
 const PAYMENT = `${PROXY}/payments`;
 
+let tenantId: string | null = null;
+export function setTenantId(id: string) { tenantId = id; }
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
       ...init?.headers,
     },
     credentials: 'include',
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `API error ${res.status}`);
+    const err = body.error;
+    throw new Error((typeof err === 'string' ? err : err?.message) || `API error ${res.status}`);
   }
   return res.json();
 }
+
+export const resolveTenant = (domain: string) =>
+  request<{ tenant: any }>(`${PROXY}/tenant/api/resolve/domain/${encodeURIComponent(domain)}`);
 
 /* ─── Notary Commission / Profile ───────────────────────── */
 
@@ -59,8 +67,11 @@ export const uploadCredential = async (notaryId: string, type: string, file: Fil
 export const getMyShifts = () =>
   request<any>(`${ROSTER}/shifts/mine`);
 
-export const createShift = (data: { startTime: string; endTime: string }) =>
-  request<any>(`${ROSTER}/shifts`, { method: 'POST', body: JSON.stringify(data) });
+export const createShift = (data: { notaryId: string; startTime: string; endTime: string }) =>
+  request<any>(`${ROSTER}/shifts`, {
+    method: 'POST',
+    body: JSON.stringify({ notary_id: data.notaryId, shift_start: data.startTime, shift_end: data.endTime }),
+  }).then((r: any) => r?.data ?? r);
 
 export const checkIn = (shiftId: string) =>
   request<any>(`${ROSTER}/shifts/${shiftId}/check-in`, { method: 'POST' });
@@ -68,8 +79,11 @@ export const checkIn = (shiftId: string) =>
 export const checkOut = (shiftId: string) =>
   request<any>(`${ROSTER}/shifts/${shiftId}/check-out`, { method: 'POST' });
 
-export const sendHeartbeat = () =>
-  request<any>(`${ROSTER}/presence/heartbeat`, { method: 'POST' });
+export const sendHeartbeat = (notaryId: string, shiftId?: string, status: 'available' | 'in_session' | 'break' = 'available') =>
+  request<any>(`${ROSTER}/presence/heartbeat`, {
+    method: 'POST',
+    body: JSON.stringify({ notary_id: notaryId, shift_id: shiftId, status }),
+  });
 
 export const getCoverageMap = () =>
   request<any>(`${ROSTER}/coverage`);
@@ -79,26 +93,31 @@ export const getCoverageMap = () =>
 export const getSessionQueue = () =>
   request<any>(`${API}/sessions/queue`).then((r: any) => r?.data ?? r);
 
-export const claimSession = (sessionId: string) =>
-  request<any>(`${API}/sessions/${sessionId}/match`, {
-    method: 'POST',
-    body: JSON.stringify({ notaryId: 'self' }),
-  });
-
 export const getSession = (sessionId: string) =>
   request<any>(`${API}/sessions/${sessionId}`);
 
-export const advanceSession = (sessionId: string, status: string) =>
+export const listMySessions = (notaryId: string, limit = 20) =>
+  request<any>(`${API}/sessions?notary_id=${encodeURIComponent(notaryId)}&limit=${limit}`).then((r: any) => r?.data ?? r);
+
+export const advanceSession = (sessionId: string, status: 'in_session' | 'completed' | 'failed') =>
   request<any>(`${API}/sessions/${sessionId}/advance`, {
     method: 'POST',
     body: JSON.stringify({ status }),
-  });
+  }).then((r: any) => r?.data ?? r);
 
-export const completeSession = (sessionId: string) =>
-  request<any>(`${API}/sessions/${sessionId}/advance`, {
+export const completeSession = (sessionId: string) => advanceSession(sessionId, 'completed');
+
+export const claimSession = (sessionId: string, notaryId: string) =>
+  request<any>(`${API}/sessions/${sessionId}/claim`, {
     method: 'POST',
-    body: JSON.stringify({ status: 'completed' }),
-  });
+    body: JSON.stringify({ notary_id: notaryId }),
+  }).then((r: any) => r?.data ?? r);
+
+export const documentUrl = (sessionId: string, documentId: string, version: 'original' | 'signed' | 'sealed' = 'original') =>
+  `${API}/sessions/${sessionId}/documents/${documentId}/download?version=${version}`;
+
+export const getSessionJournal = (sessionId: string) =>
+  request<any>(`${API}/sessions/${sessionId}/journal`).then((r: any) => r?.data ?? r);
 
 /* ─── LiveKit ────────────────────────────────────────────── */
 
@@ -120,13 +139,13 @@ export const stopSessionRecording = (sessionId: string) =>
 /* ─── E-Sign ─────────────────────────────────────────────── */
 
 export const sendForSignature = (sessionId: string, documentId: string) =>
-  request<any>(`http://localhost:4006/esign/send`, {
+  request<any>(`${PROXY}/esign/signatures`, {
     method: 'POST',
-    body: JSON.stringify({ sessionId, documentId }),
+    body: JSON.stringify({ session_id: sessionId, document_id: documentId }),
   });
 
 export const getEsignStatus = (sessionId: string) =>
-  request<any>(`http://localhost:4006/esign/status/${sessionId}`);
+  request<any>(`${PROXY}/esign/signatures/session/${sessionId}`);
 
 /* ─── Journal ────────────────────────────────────────────── */
 
@@ -152,14 +171,14 @@ export const exportJournal = () =>
 
 /* ─── Seal ───────────────────────────────────────────────── */
 
-export const applySeal = (sessionId: string, documentId: string, sealData: any) =>
-  request<any>(`${SEAL}/seal/apply`, {
+export const applySeal = (sessionId: string, actType: string = 'acknowledgment') =>
+  request<any>(`${API}/sessions/${sessionId}/seal`, {
     method: 'POST',
-    body: JSON.stringify({ sessionId, documentId, ...sealData }),
-  });
+    body: JSON.stringify({ act_type: actType }),
+  }).then((r: any) => r?.data ?? r);
 
-export const verifySeal = (documentId: string) =>
-  request<any>(`${SEAL}/seal/verify/${documentId}`);
+export const verifySeal = (sessionId: string) =>
+  request<any>(`${SEAL}/seals/${sessionId}/status`).then((r: any) => r?.data ?? r);
 
 /* ─── Earnings / Payments ────────────────────────────────── */
 
@@ -178,12 +197,30 @@ export const getMyActiveShift = () =>
     Array.isArray(s) ? s.find((x: any) => x.status === "active" || x.checkedInAt) ?? null : s
   );
 export const getQueuedSessions = getSessionQueue;
-export const startShift = () =>
-  createShift({
-    startTime: new Date().toISOString(),
-    endTime: new Date(Date.now() + 8 * 3600 * 1000).toISOString(),
-  });
-export const acceptSession = claimSession;
+/** Start a shift: create (or reuse) today's shift, check in, and announce presence. */
+export const startShift = async () => {
+  const me: any = await getMyProfile().then((r: any) => r?.data ?? r);
+  const shifts: any[] = await getMyShifts().then((r: any) => (Array.isArray(r) ? r : r?.data ?? []));
+  let shift = shifts.find((x) => x.status === 'active');
+  if (!shift) {
+    shift = shifts.find((x) => x.status === 'scheduled');
+    if (!shift) {
+      shift = await createShift({
+        notaryId: me.id,
+        startTime: new Date().toISOString(),
+        endTime: new Date(Date.now() + 8 * 3600 * 1000).toISOString(),
+      });
+    }
+    await checkIn(shift.id);
+  }
+  await sendHeartbeat(me.id, shift.id, 'available').catch(() => undefined);
+  return shift;
+};
+export const acceptSession = (sessionId: string) =>
+  getMyProfile().then((me: any) => claimSession(sessionId, (me?.data ?? me)?.id));
 export const getSessionById = getSession;
-export const confirmJournalEntry = (sessionId: string) =>
-  createJournalEntry({ sessionId });
+export const confirmJournalEntry = (sessionId: string, data: { notarial_act_type?: string; signer_address?: string } = {}) =>
+  request<any>(`${API}/sessions/${sessionId}/journal`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }).then((r: any) => r?.data ?? r);

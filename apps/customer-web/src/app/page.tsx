@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { useTenantStore } from '@/lib/store';
+import { BrandMark } from '@/components/BrandMark';
 import {
   Shield,
   Video,
@@ -29,12 +30,7 @@ export default function LandingPage() {
       {/* ─── Navbar ────────────────────────────────────────────── */}
       <header className="border-b border-gray-100 bg-white/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex h-16 items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/seal-icon.png" alt="SealProof" className="h-12 w-12 object-contain drop-shadow-[0_0_6px_rgba(197,160,94,0.45)]" />
-            <span className="text-2xl font-script text-navy-700">
-              Seal<span className="text-brand-300">Proof</span>
-            </span>
-          </div>
+          <BrandMark />
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
             <a href="#how-it-works" className="hover:text-navy-700 transition-colors">How it Works</a>
             <a href="#documents" className="hover:text-navy-700 transition-colors">Documents</a>
@@ -92,7 +88,7 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className="mt-6 text-sm text-gray-500">
-              Starting at $25 per session. No subscription required.
+              Starting at ${((branding?.b2cStandardPriceCents ?? 2500) / 100).toFixed(0)} per session. No subscription required.
             </p>
           </div>
         </div>
@@ -263,7 +259,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
             <div className="card-legal p-8 text-center">
               <div className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">Standard</div>
-              <div className="text-4xl font-display font-bold text-navy-700">$25</div>
+              <div className="text-4xl font-display font-bold text-navy-700">${((branding?.b2cStandardPriceCents ?? 2500) / 100).toFixed(0)}</div>
               <div className="text-sm text-gray-500 mt-1">per session</div>
               <div className="divider-gold my-6" />
               <ul className="space-y-3 text-sm text-gray-600 text-left">
@@ -297,7 +293,7 @@ export default function LandingPage() {
                 </span>
               </div>
               <div className="text-sm font-medium text-gold-500 uppercase tracking-wide mb-2">Rush</div>
-              <div className="text-4xl font-display font-bold text-navy-700">$45</div>
+              <div className="text-4xl font-display font-bold text-navy-700">${((branding?.b2cRushPriceCents ?? 4500) / 100).toFixed(0)}</div>
               <div className="text-sm text-gray-500 mt-1">per session</div>
               <div className="divider-gold my-6" />
               <ul className="space-y-3 text-sm text-gray-600 text-left">
@@ -391,7 +387,7 @@ export default function LandingPage() {
             <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
                 <Scale className="h-5 w-5 text-gold-300" />
-                <span className="text-2xl font-script text-white">Seal<span className="text-brand-300">Proof</span></span>
+                <BrandMark tone="light" size="sm" />
               </div>
               <p className="text-sm leading-relaxed max-w-sm">
                 Remote online notarization built to the legal standard.
@@ -423,7 +419,9 @@ export default function LandingPage() {
               &copy; {new Date().getFullYear()} {branding?.legalEntity || 'SealProof LLC'}. All rights reserved.
             </p>
             <p className="text-xs text-gray-500">
-              A SealProof LLC platform. Formed in Delaware. Operated in North Carolina.
+              {branding && branding.slug !== 'sealproof'
+                ? `${companyName} remote online notarization is powered by SealProof.`
+                : 'A SealProof LLC platform. Delaware entity. Notaries commissioned in every RON-authorized state.'}
             </p>
           </div>
         </div>

@@ -20,11 +20,14 @@ import {
 function statusBadge(status: string) {
   const map: Record<string, { variant: 'success' | 'warning' | 'gold' | 'navy' | 'danger' | 'default'; label: string }> = {
     completed:       { variant: 'success', label: 'Completed' },
-    in_progress:     { variant: 'gold',    label: 'In Progress' },
-    queued:          { variant: 'warning', label: 'Queued' },
-    kyc_pending:     { variant: 'warning', label: 'ID Verification' },
-    payment_pending: { variant: 'warning', label: 'Payment' },
-    cancelled:       { variant: 'danger',  label: 'Cancelled' },
+    in_session:        { variant: 'gold',    label: 'In Session' },
+    matched_to_notary: { variant: 'gold',    label: 'Notary Assigned' },
+    queued:            { variant: 'warning', label: 'Queued' },
+    created:           { variant: 'default', label: 'Draft' },
+    kyc_pending:       { variant: 'warning', label: 'ID Verification' },
+    kyc_complete:      { variant: 'warning', label: 'Awaiting Payment' },
+    rejected:          { variant: 'danger',  label: 'Cancelled' },
+    cancelled:         { variant: 'danger',  label: 'Cancelled' },
     failed:          { variant: 'danger',  label: 'Failed' },
   };
   const s = map[status] || { variant: 'default' as const, label: status };
@@ -44,7 +47,7 @@ export default function DashboardPage() {
 
   const recentSessions = sessions.slice(0, 5);
   const completedCount = sessions.filter((s) => s.status === 'completed').length;
-  const activeCount = sessions.filter((s) => !['completed', 'cancelled', 'failed'].includes(s.status)).length;
+  const activeCount = sessions.filter((s) => !['completed', 'rejected', 'cancelled', 'failed'].includes(s.status)).length;
 
   return (
     <div>

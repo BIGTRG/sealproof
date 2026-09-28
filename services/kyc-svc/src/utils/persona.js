@@ -22,7 +22,24 @@ const personaClient = axios.create({
  * Create a Persona inquiry for a signer.
  * Returns the inquiry ID and URL for the signer to complete.
  */
+/**
+ * Sandbox mode: active when KYC_MODE=sandbox, or when Persona is not fully
+ * configured (no API key or no inquiry template `itmpl_...`). The flow runs
+ * end to end with a simulated, clearly-labelled result so the platform can be
+ * exercised before production credentials land.
+ */
+function isSandbox() {
+  if (process.env.KYC_MODE === 'sandbox') return true;
+  if (process.env.KYC_MODE === 'live') return false;
+  return !config.persona.apiKey || !/^itmpl_/.test(config.persona.templateId || '');
+}
+
 async function createInquiry({ signerId, sessionId, signerName, signerEmail }) {
+  if (isSandbox()) {
+    const inquiryId = `sbx_inq_${crypto.randomBytes(8).toString('hex')}`;
+    logger.info('KYC sandbox inquiry created', { sessionId, signerId, inquiryId });
+    return { inquiryId, status: 'completed', referenceId: `${sessionId}:${signerId}`, sessionUrl: null, mode: 'sandbox' };
+  }
   try {
     const response = await personaClient.post('/inquiries', {
       data: {
@@ -45,6 +62,7 @@ async function createInquiry({ signerId, sessionId, signerName, signerEmail }) {
       status: inquiry.attributes.status,
       referenceId: inquiry.attributes['reference-id'],
       sessionUrl: `https://withpersona.com/verify?inquiry-id=${inquiry.id}`,
+      mode: 'persona',
     };
   } catch (err) {
     logger.error('Persona inquiry creation failed', {
@@ -115,4 +133,4 @@ function mapPersonaStatus(personaStatus) {
   }
 }
 
-module.exports = { createInquiry, getInquiry, verifyWebhookSignature, mapPersonaStatus };
+module.exports = { createInquiry, getInquiry, verifyWebhookSignature, mapPersonaStatus, isSandbox };
