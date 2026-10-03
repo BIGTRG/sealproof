@@ -4,6 +4,11 @@
  * POST /v1/keys           Create new API key pair
  * POST /v1/keys/rotate    Rotate API secret
  * GET  /v1/keys/:id       Get key info (no secret)
+ * POST /v1/keys/:id/status  Set status (active | pending_payment | suspended)
+ *
+ * All routes require X-SealProof-Admin-Token (see middleware/adminAuth.js).
+ * New keys start as pending_payment and cannot call the API until activated
+ * (hmacAuth only accepts status = 'active').
  */
 const router = require('express').Router();
 const crypto = require('crypto');
@@ -24,6 +29,7 @@ router.post('/',
   async (req, res, next) => {
     try {
       const { partner_name, contact_email, subscription_tier } = req.body;
+      const initialStatus = req.body.activate === true ? 'active' : 'pending_payment';
       const apiKey = generateApiKey();
       const apiSecret = generateApiSecret();
 
@@ -36,12 +42,12 @@ router.post('/',
         `INSERT INTO api_partners (id, partner_name, contact_email, api_key, api_secret, subscription_tier, status,
                                   business_name, primary_contact_email, primary_contact_name, api_key_hash,
                                   monthly_subscription_cents, per_session_cents)
-         VALUES ($1, $2, $3, $4, $5, $6, 'active', $2, $3, $7, $8, $9, $10)
+         VALUES ($1, $2, $3, $4, $5, $6, $11, $2, $3, $7, $8, $9, $10)
          RETURNING id, partner_name, api_key, subscription_tier, status, created_at`,
-        [uuid(), partner_name, contact_email || '', apiKey, apiSecret, subscription_tier || 'starter', contactName, apiKeyHash, pricing[0], pricing[1]]
+        [uuid(), partner_name, contact_email || '', apiKey, apiSecret, subscription_tier || 'starter', contactName, apiKeyHash, pricing[0], pricing[1], initialStatus]
       );
 
-      await audit.emitAuditLog({ eventType: 'api.key_created', actorType: 'admin', payload: { partner_name, tier: subscription_tier } });
+      await audit.emitAuditLog({ eventType: 'api.key_created', actorType: 'admin', payload: { partner_name, tier: subscription_tier, status: initialStatus } });
 
       // Return secret ONCE — will never be shown again
       res.status(201).json({
@@ -62,7 +68,7 @@ router.post('/rotate',
     try {
       const newSecret = generateApiSecret();
       const result = await db.query(
-        `UPDATE api_partners SET api_secret = $1, updated_at = NOW()
+        `UPDATE api_partners SET api_secret = $1
          WHERE api_key = $2 AND status = 'active' RETURNING id, partner_name, api_key`,
         [newSecret, req.body.api_key]
       );
@@ -81,6 +87,25 @@ router.get('/:id', async (req, res, next) => {
       [req.params.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: { message: 'Partner not found' } });
+    res.json({ data: result.rows[0] });
+  } catch (err) { next(err); }
+});
+
+// POST /v1/keys/:id/status — activate after payment, or suspend
+const ALLOWED_STATUS = ['active', 'pending_payment', 'suspended'];
+router.post('/:id/status', async (req, res, next) => {
+  try {
+    const status = req.body && req.body.status;
+    if (!ALLOWED_STATUS.includes(status)) {
+      return res.status(400).json({ error: { message: `status must be one of ${ALLOWED_STATUS.join(', ')}` } });
+    }
+    const result = await db.query(
+      `UPDATE api_partners SET status = $1, is_active = ($1 = 'active') WHERE id = $2
+       RETURNING id, partner_name, subscription_tier, status`,
+      [status, req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: { message: 'Partner not found' } });
+    await audit.emitAuditLog({ eventType: 'api.key_status_changed', actorType: 'admin', payload: { partner: result.rows[0].partner_name, status } });
     res.json({ data: result.rows[0] });
   } catch (err) { next(err); }
 });

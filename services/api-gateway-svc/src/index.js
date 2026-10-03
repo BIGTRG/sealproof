@@ -16,6 +16,7 @@ const keyRoutes = require('./routes/keys');
 const healthRoutes = require('./routes/health');
 const { hmacAuth } = require('./middleware/hmacAuth');
 const { rateLimiter } = require('./middleware/rateLimiter');
+const { adminAuth } = require('./middleware/adminAuth');
 
 const app = express();
 
@@ -25,7 +26,7 @@ app.use(express.json());
 app.use(requestLogger);
 
 app.use('/health', healthRoutes);
-app.use('/v1/keys', keyRoutes);
+app.use('/v1/keys', adminAuth, keyRoutes);
 app.use('/v1', hmacAuth, rateLimiter, apiRoutes);
 
 app.use(errorHandler);
